@@ -1,6 +1,11 @@
 #ifndef OPENGL_H_INCLUDED
 #define OPENGL_H_INCLUDED
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#endif // _WIN32
+
 #include <GL/gl.h>
 #include <GL/glext.h>
 

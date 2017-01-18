@@ -21,4 +21,7 @@ window_win32_destroy(window_win32* window);
 void
 window_win32_process_messages(window_win32* window);
 
+void
+window_win32_redraw(window_win32* window);
+
 #endif // WINDOW_WIN32_H_INCLUDED

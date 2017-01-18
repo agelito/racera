@@ -8,7 +8,7 @@
 
 #include "window_win32.h"
 
-int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+int main(int argc, char* argv[])
 {
     window_win32* window = window_win32_create(500, 500, "racera");
 
@@ -24,11 +24,11 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         game_update_and_render(&racera_state);
         if(racera_state.should_quit)
         {
-            destroy_window(window);
+            window_win32_destroy(window);
             break;
         }
 
-        redraw_window(window);
+        window_win32_redraw(window);
 
         platform_sleep(1);
     }
@@ -40,4 +40,22 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 }
 
+#include "keyboard.h"
 
+int 
+keyboard_is_down(keyboard_state* keyboard, virtual_key key)
+{
+    return 0;
+}
+
+int 
+keyboard_is_pressed(keyboard_state* keyboard, virtual_key key)
+{
+    return 0;
+}
+
+int 
+keyboard_is_released(keyboard_state* keyboard, virtual_key key)
+{
+    return 0;
+}

@@ -152,3 +152,9 @@ window_win32_process_messages(window_win32* window)
         DispatchMessage(&message);
     }
 }
+
+void
+window_win32_redraw(window_win32* window)
+{
+    
+}

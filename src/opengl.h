@@ -2,6 +2,7 @@
 #define OPENGL_H_INCLUDED
 
 #include <GL/gl.h>
+#include <GL/glext.h>
 
 #define GL_PROC_DEC(function, ...) typedef void (APIENTRYP GL_PROC_##function) (__VA_ARGS__)
 #define GL_PROC_DEC_RET(function, return_type, ...) typedef return_type (APIENTRYP GL_PROC_##function) (__VA_ARGS__)

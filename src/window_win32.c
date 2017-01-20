@@ -9,6 +9,9 @@
 
 static char* WINDOW_WIN32_CLASS = "window_win32-windowclass";
 
+extern HGLRC
+gl_escalate_context(HDC device_context, HGLRC gl_context, int major, int minor);
+
 static LRESULT CALLBACK 
 window_win32_message_callback(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -106,6 +109,8 @@ window_win32_create(int width, int height, char* title)
 
     HGLRC gl_context = wglCreateContext(device_context);
     wglMakeCurrent(device_context, gl_context);
+
+    gl_context = gl_escalate_context(device_context, gl_context, 3, 2);
 
     window_win32* window = (window_win32*)malloc(sizeof(window_win32));
 

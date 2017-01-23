@@ -1,7 +1,4 @@
-// opengl_wgl.c
-
-#include "opengl.h"
-#include <wingdi.h>
+// win32_opengl.c
 
 #define WGL_CONTEXT_MAJOR_VERSION_ARB 0x2091
 #define WGL_CONTEXT_MINOR_VERSION_ARB 0x2092

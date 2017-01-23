@@ -1,10 +1,4 @@
-// platform_windows.c
-
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#include <stdlib.h>
-
-#include "platform.h"
+// win32_platform.c
 
 long
 platform_executable_directory(char* destination, long destination_size)

@@ -2,14 +2,18 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#include <wingdi.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "opengl.h"
 #include "platform.h"
 #include "racera.h"
 
+#include "win32_platform.c"
 #include "win32_window.c"
+#include "win32_opengl.c"
 
 extern void game_update_and_render(struct game_state* state);
 

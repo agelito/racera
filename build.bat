@@ -10,7 +10,7 @@ if not exist obj (
    mkdir obj
 )
 
-set SRC_FILES=src/win32_main.c src/window_win32.c src/platform_windows.c src/racera_game.c src/math.c src/opengl.c src/opengl_wgl.c src/renderer.c src/shader.c src/mesh.c src/texture.c
+set SRC_FILES=src/win32_main.c src/platform_windows.c src/racera_game.c src/math.c src/opengl.c src/opengl_wgl.c src/renderer.c src/shader.c src/mesh.c src/texture.c
 set LIBRARIES=kernel32.lib gdi32.lib user32.lib opengl32.lib
 
 echo "Compiling..."

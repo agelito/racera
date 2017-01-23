@@ -1,11 +1,15 @@
-// window_win32.c
+// win32_window.c
 
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
+typedef struct window_win32 window_win32;
 
-#include <stdlib.h>
-
-#include "window_win32.h"
+struct window_win32
+{
+    HWND handle;
+    HGLRC gl_context;
+    int is_open;
+    int width;
+    int height;
+};
 
 static char* WINDOW_WIN32_CLASS = "window_win32-windowclass";
 
@@ -13,7 +17,7 @@ extern HGLRC
 gl_escalate_context(HDC device_context, HGLRC gl_context, int major, int minor);
 
 static LRESULT CALLBACK 
-window_win32_message_callback(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+window_message_callback(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     window_win32* window = (window_win32*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
     if(window == 0 || window->handle != hWnd) 
@@ -36,8 +40,8 @@ window_win32_message_callback(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
     return 0;
 }
 
-window_win32*
-window_win32_create(int width, int height, char* title)
+static window_win32*
+window_create(int width, int height, char* title)
 {
     char* window_title = title;
     char* window_class_name = WINDOW_WIN32_CLASS;
@@ -46,7 +50,7 @@ window_win32_create(int width, int height, char* title)
 
     WNDCLASSEX window_class;
     window_class.cbSize = sizeof(WNDCLASSEX);
-    window_class.lpfnWndProc = window_win32_message_callback;
+    window_class.lpfnWndProc = window_message_callback;
     window_class.cbClsExtra = 0;
     window_class.cbWndExtra = 8;
     window_class.style = CS_OWNDC;
@@ -129,8 +133,8 @@ window_win32_create(int width, int height, char* title)
     return window;
 }
 
-void
-window_win32_destroy(window_win32* window)
+static void
+window_destroy(window_win32* window)
 {
     if(window->gl_context)
     {
@@ -147,8 +151,8 @@ window_win32_destroy(window_win32* window)
     free(window);
 }
 
-void
-window_win32_process_messages(window_win32* window)
+static void
+window_process_messages(window_win32* window)
 {
     MSG message;
     while(PeekMessage(&message, window->handle, 0, 0, PM_REMOVE))
@@ -158,8 +162,8 @@ window_win32_process_messages(window_win32* window)
     }
 }
 
-void
-window_win32_redraw(window_win32* window)
+static void
+window_redraw(window_win32* window)
 {
     
 }

@@ -38,15 +38,14 @@ int main(int argc, char* argv[])
         }
 
         window_redraw(window);
-
         platform_sleep(1);
     }
+
 
     window_destroy(window);
     window = 0;
 
     return 0;
-
 }
 
 #include "keyboard.h"

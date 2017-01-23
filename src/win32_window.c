@@ -4,6 +4,7 @@ typedef struct window_win32 window_win32;
 
 struct window_win32
 {
+    HDC context;
     HWND handle;
     HGLRC gl_context;
     int is_open;
@@ -27,8 +28,6 @@ window_message_callback(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     switch(uMsg)
     {
-    case WM_PAINT:
-        break;
     case WM_DESTROY:
         window->is_open = 0;
         PostQuitMessage(0);
@@ -118,6 +117,7 @@ window_create(int width, int height, char* title)
 
     window_win32* window = (window_win32*)malloc(sizeof(window_win32));
 
+    window->context = device_context;
     window->handle = window_handle;
     window->gl_context = gl_context;
     window->width = width;
@@ -165,5 +165,6 @@ window_process_messages(window_win32* window)
 static void
 window_redraw(window_win32* window)
 {
-    
+    SwapBuffers(window->context);
+    InvalidateRect(window->handle, 0, 0);
 }

@@ -18,12 +18,14 @@ static LRESULT CALLBACK
 window_message_callback(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     window_win32* window = &global_win32.window;
+    win32_keyboard* keyboard = &global_win32.keyboard;
 
     if(window == 0 || window->handle != hWnd) 
     {
         return DefWindowProc(hWnd, uMsg, wParam, lParam);
     }
 
+    int is_repeat;
     int x, y, rel_x, rel_y;
 
     switch(uMsg)
@@ -40,6 +42,20 @@ window_message_callback(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         global_win32.mouse.relative_y = rel_y;
         break;
     case WM_SIZE:
+    case WM_KEYDOWN:
+        is_repeat = (lParam & 0x40000000);
+        if(!is_repeat)
+        {
+            keyboard->released[wParam] = 0;
+            keyboard->pressed[wParam] = 1;
+            keyboard->down[wParam] = 1;
+        }
+        break;
+    case WM_KEYUP:
+        keyboard->released[wParam] = 1;
+        keyboard->pressed[wParam] = 0;
+        keyboard->down[wParam] = 0;
+        break;
         resize_viewport(window, LOWORD(lParam), HIWORD(lParam));
         break;
     case WM_DESTROY:

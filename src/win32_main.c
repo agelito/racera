@@ -22,6 +22,15 @@ struct win32_mouse
     int relative_y;
 };
 
+typedef struct win32_keyboard win32_keyboard;
+
+struct win32_keyboard
+{
+    int pressed[256];
+    int released[256];
+    int down[256];
+};
+
 typedef struct window_win32 window_win32;
 
 struct window_win32
@@ -40,6 +49,7 @@ struct win32_platform
 {
     window_win32 window;
     win32_mouse mouse;
+    win32_keyboard keyboard;
 };
 
 static win32_platform global_win32;
@@ -63,6 +73,7 @@ int main(int argc, char* argv[])
     game_state racera_state = (game_state){0};
 
     window_win32* window = &global_win32.window;
+    win32_keyboard* keyboard = &global_win32.keyboard;
 
     while(window->is_open)
     {
@@ -76,7 +87,29 @@ int main(int argc, char* argv[])
         racera_state.mouse.relative_x = global_win32.mouse.relative_x;
         racera_state.mouse.relative_y = global_win32.mouse.relative_y;
 
+        *(racera_state.keyboard.pressed + VKEY_W) = keyboard->pressed[0x57];
+        *(racera_state.keyboard.pressed + VKEY_A) = keyboard->pressed[0x41];
+        *(racera_state.keyboard.pressed + VKEY_S) = keyboard->pressed[0x53];
+        *(racera_state.keyboard.pressed + VKEY_D) = keyboard->pressed[0x44];
+        *(racera_state.keyboard.pressed + VKEY_Q) = keyboard->pressed[0x51];
+        *(racera_state.keyboard.pressed + VKEY_Z) = keyboard->pressed[0x5A];
+
+        *(racera_state.keyboard.released + VKEY_W) = keyboard->released[0x57];
+        *(racera_state.keyboard.released + VKEY_A) = keyboard->released[0x41];
+        *(racera_state.keyboard.released + VKEY_S) = keyboard->released[0x53];
+        *(racera_state.keyboard.released + VKEY_D) = keyboard->released[0x44];
+        *(racera_state.keyboard.released + VKEY_Q) = keyboard->released[0x51];
+        *(racera_state.keyboard.released + VKEY_Z) = keyboard->released[0x5A];
+
+        *(racera_state.keyboard.down + VKEY_W) = keyboard->down[0x57];
+        *(racera_state.keyboard.down + VKEY_A) = keyboard->down[0x41];
+        *(racera_state.keyboard.down + VKEY_S) = keyboard->down[0x53];
+        *(racera_state.keyboard.down + VKEY_D) = keyboard->down[0x44];
+        *(racera_state.keyboard.down + VKEY_Q) = keyboard->down[0x51];
+        *(racera_state.keyboard.down + VKEY_Z) = keyboard->down[0x5A];
+
         game_update_and_render(&racera_state);
+
         if(racera_state.should_quit)
         {
             window_destroy(window);
@@ -88,6 +121,13 @@ int main(int argc, char* argv[])
 
         global_win32.mouse.relative_x = 0;
         global_win32.mouse.relative_y = 0;
+
+        int key;
+        for(key = 0; key < 256; ++key)
+        {
+            global_win32.keyboard.pressed[key] = 0;
+            global_win32.keyboard.released[key] = 0;
+        }
     }
 
 
@@ -97,22 +137,3 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-#include "keyboard.h"
-
-int 
-keyboard_is_down(keyboard_state* keyboard, virtual_key key)
-{
-    return 0;
-}
-
-int 
-keyboard_is_pressed(keyboard_state* keyboard, virtual_key key)
-{
-    return 0;
-}
-
-int 
-keyboard_is_released(keyboard_state* keyboard, virtual_key key)
-{
-    return 0;
-}

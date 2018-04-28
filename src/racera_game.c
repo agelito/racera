@@ -178,12 +178,12 @@ game_update_and_render(game_state* state)
 	state->created_cube_count -= 1;
     }
 
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    renderer_queue_push_clear(&state->render_queue, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT,
+			      (float[4]){0.1f, 0.1f, 0.1f, 1.0f});
 
     { // NOTE: Draw scene
-	renderer_queue_push(&state->render_queue, &state->ground,
-			    &state->ground_material, matrix_identity());
+	renderer_queue_push_draw(&state->render_queue, &state->ground,
+				 &state->ground_material, matrix_identity());
 	
 	int i;
 	for(i = 0; i < state->created_cube_count; i++)
@@ -191,7 +191,7 @@ game_update_and_render(game_state* state)
 	    vector3 position = *(state->created_cube_positions + i);
 	    matrix4 transform = matrix_translate(position.x, position.y, position.z);
 	
-	    renderer_queue_push(&state->render_queue, &state->cup, &state->cup_material, transform);
+	    renderer_queue_push_draw(&state->render_queue, &state->cup, &state->cup_material, transform);
 	}
 
 	float right = (float)state->screen_width * 0.5f;

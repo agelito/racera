@@ -68,6 +68,10 @@ struct game_state
     
     int created_cube_count;
     vector3 created_cube_positions[MAX_CUBES];
+
+    float ground_resolution;
+
+    heightmap heightmap;
 };
 
 void

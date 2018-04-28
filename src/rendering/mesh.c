@@ -508,10 +508,10 @@ mesh_create_plane_xz(float side, int subdivisions)
 }
 
 mesh_data
-mesh_create_from_heightmap(heightmap heightmap, float scale)
+mesh_create_from_heightmap(heightmap heightmap, float resolution)
 {
-    int width = heightmap.width;
-    int height = heightmap.height;
+    int width = (int)(heightmap.width * resolution);
+    int height = (int)(heightmap.height * resolution);
     
     mesh_data data = (mesh_data){0};
     data.vertex_count = (width * height) * 6;
@@ -524,26 +524,38 @@ mesh_create_from_heightmap(heightmap heightmap, float scale)
     vector2* texcoords = (vector2*)malloc(texcoord_data_size);
     data.vertices.texcoords = texcoords;
 
-    vector3 center_offset = vector3_create((float)width * 0.5f, 0.0f,
-					   (float)height * 0.5f);
-    center_offset = vector3_scale(center_offset, scale);
+    vector3 center_offset = vector3_create((float)width * 0.5f, 0.0f, (float)height * 0.5f);
+    center_offset = vector3_scale(center_offset, 1.0f / resolution);
 
     int vertex_index = 0;
+
+    float stepX = 1.0f / resolution;
+    float stepY = 1.0f / resolution;
+
+    float positionX = 0.0f;
+    float positionY = 0.0f;
 
     int x, y;
     for(y = 0; y < height; ++y)
     {
+	positionX = 0.0f;
+	
 	for(x = 0; x < width; ++x)
 	{
-	    float height0 = heightmap_get(&heightmap, x,     y + 1);
-	    float height1 = heightmap_get(&heightmap, x + 1, y + 1);
-	    float height2 = heightmap_get(&heightmap, x,     y);
-	    float height3 = heightmap_get(&heightmap, x + 1, y);
+	    float u0 = (float)x / width;
+	    float u1 = (float)(x + 1) / width;
+	    float v0 = (float)y / height;
+	    float v1 = (float)(y + 1) / height;
+	    
+	    float height0 = heightmap_sample(&heightmap, u0, v1);
+	    float height1 = heightmap_sample(&heightmap, u1, v1);
+	    float height2 = heightmap_sample(&heightmap, u0, v0);
+	    float height3 = heightmap_sample(&heightmap, u1, v0);
 
-	    float x0 = (float)x * scale;
-	    float x1 = (float)(x + 1) * scale;
-	    float y0 = (float)y * scale;
-	    float y1 = (float)(y + 1) * scale;
+	    float x0 = (float)positionX;
+	    float x1 = (float)positionX + stepX;
+	    float y0 = (float)positionY;
+	    float y1 = (float)positionY + stepY;
 	    
 	    positions[vertex_index+0] =
 		vector3_subtract(vector3_create(x0, height2, y0), center_offset);
@@ -566,7 +578,11 @@ mesh_create_from_heightmap(heightmap heightmap, float scale)
 	    texcoords[vertex_index+5] = vector2_create(1.0f, 1.0f);
 
 	    vertex_index += 6;
+
+	    positionX += stepX;
 	}
+
+	positionY += stepY;
     }
 
     return data;

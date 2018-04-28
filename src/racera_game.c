@@ -22,6 +22,8 @@ game_initialize(game_state* state)
     state->gl = load_gl_functions();
     gl_functions* gl = &state->gl;
 
+    state->ground_resolution = 1.0f;
+
     state->render_queue = renderer_queue_create(gl, KB(64), KB(16));
 
     { // NOTE: Load shaders
@@ -47,11 +49,11 @@ game_initialize(game_state* state)
 	platform_log("load meshes\n");
 
 	texture_data heightmap_texture = texture_create_from_tga("heightmaps/uppsala/uppsala_south.tga");
-	heightmap heightmap = heightmap_load_from_texture(heightmap_texture, 1000, 1000, 100.0f);
+	state->heightmap = heightmap_load_from_texture(heightmap_texture, 500, 500, 100.0f);
 	texture_data_free(&heightmap_texture);
 	
 	state->ground =
-	    load_mesh(gl, mesh_create_from_heightmap(heightmap, 1.0f), 0);
+	    load_mesh(gl, mesh_create_from_heightmap(state->heightmap, state->ground_resolution), 0);
 	mesh_data_free(&state->ground.data);
     
 	state->cube = load_mesh(gl, mesh_create_cube(1.0f), 0);
@@ -98,7 +100,8 @@ game_initialize(game_state* state)
 			   vector4_create(0.0f, 0.0f, 0.0f, 0.75f));
     }
     
-    state->camera_position = (vector3){{{0.0f, 1.0f, -2.0f}}};
+    state->camera_position = (vector3){{{-10.2f, 13.5f, -10.2f}}};
+    state->camera_pitch_yaw_roll = vector3_create(-31.0f, -55.0f, 0.0f);
 
     int n;
     for_range(n, 50)
@@ -178,6 +181,25 @@ game_update_and_render(game_state* state)
 	state->created_cube_count -= 1;
     }
 
+    if(keyboard_is_pressed(&state->keyboard, VKEY_G))
+    {
+	state->ground_resolution += 0.2f;
+
+	state->ground = load_mesh(&state->gl, mesh_create_from_heightmap(state->heightmap,
+									 state->ground_resolution), 0);
+	mesh_data_free(&state->ground.data);
+    }
+
+    if(keyboard_is_pressed(&state->keyboard, VKEY_H))
+    {
+	state->ground_resolution -= 0.2f;
+
+	state->ground =
+	    load_mesh(&state->gl, mesh_create_from_heightmap(state->heightmap,
+							     state->ground_resolution), 0);
+	mesh_data_free(&state->ground.data);
+    }
+
     renderer_queue_push_clear(&state->render_queue, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT,
 			      (float[4]){0.1f, 0.1f, 0.1f, 1.0f});
 
@@ -214,6 +236,15 @@ game_update_and_render(game_state* state)
 	vector2 text_position = vector2_create((real32)state->screen_width * -0.48f,
 						(real32)state->screen_height * 0.45f);
 	ui_draw_label(state, text_position, timings_text, 32.0f, &state->deja_vu);
+
+	text_position.y -= 46.0f;
+	
+	char camera_text[256];
+	platform_format(camera_text, 256, "cpos: %.2f %.2f %.2f\ncrot: %.2f %.2f",
+			state->camera_position.x, state->camera_position.y, state->camera_position.x,
+			state->camera_pitch_yaw_roll.x, state->camera_pitch_yaw_roll.y);
+	ui_draw_label(state, text_position, camera_text, 26.0f, &state->deja_vu);
+
 
 	matrix4 projection = matrix_orthographic((float)state->screen_width,
 						 (float)state->screen_height, 1.0f, 100.0f);

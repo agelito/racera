@@ -1,6 +1,10 @@
 #ifndef TEXTURE_H_INCLUDED
 #define TEXTURE_H_INCLUDED
 
+#include "../math.h"
+
+#include "opengl.h"
+
 typedef struct
 {
     int width;

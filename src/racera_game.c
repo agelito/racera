@@ -46,12 +46,13 @@ game_initialize(game_state* state)
     { // NOTE: Load Meshes
 	platform_log("load meshes\n");
 
-	texture_data heightmap = texture_create_from_tga("heightmaps/heightmap.tga");
+	texture_data heightmap_texture = texture_create_from_tga("heightmaps/uppsala/uppsala_south.tga");
+	heightmap heightmap = heightmap_load_from_texture(heightmap_texture, 1000, 1000, 100.0f);
+	texture_data_free(&heightmap_texture);
 	
 	state->ground =
-	    load_mesh(gl, mesh_create_from_heightmap(heightmap, 10000.0f, 1024, 1000.0f), 0);
+	    load_mesh(gl, mesh_create_from_heightmap(heightmap, 1.0f), 0);
 	mesh_data_free(&state->ground.data);
-	texture_data_free(&heightmap);
     
 	state->cube = load_mesh(gl, mesh_create_cube(1.0f), 0);
 	mesh_data_free(&state->cube.data);
@@ -62,7 +63,7 @@ game_initialize(game_state* state)
 	state->pointer = load_mesh(gl, mesh_create_circle(1.0f, 5), 0);
 	mesh_data_free(&state->pointer.data);
 
-	state->cup = load_mesh(gl, obj_load_from_file("cup.obj"), 0);
+	state->cup = load_mesh(gl, obj_load_from_file("models/cup.obj"), 0);
 	mesh_data_free(&state->cup.data);
 
 	state->quad = load_mesh(gl, mesh_create_quad(), 0);

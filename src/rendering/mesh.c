@@ -508,51 +508,66 @@ mesh_create_plane_xz(float side, int subdivisions)
 }
 
 mesh_data
-mesh_create_from_heightmap(texture_data heightmap, float size, int resolution, float height_resolution)
+mesh_create_from_heightmap(heightmap heightmap, float scale)
 {
-    mesh_data data = mesh_create_plane_xz(size, resolution);
-
-    size_t height_data_size = (sizeof(float) * (resolution * resolution));
-    float* height_data = (float*)malloc(height_data_size);
-
-    int x, y;
-    for(y = 0; y < resolution; ++y)
-    {
-	for(x = 0; x < resolution; ++x)
-	{
-	    float tx = (float)x / resolution;
-	    float ty = (float)y / resolution;
-
-	    vector4 heightmap_color = texture_bilinear_sample(tx, ty, heightmap);
-	    *(height_data + (x + y * resolution)) = (heightmap_color.x * height_resolution);
-	}
-    }
+    int width = heightmap.width;
+    int height = heightmap.height;
     
+    mesh_data data = (mesh_data){0};
+    data.vertex_count = (width * height) * 6;
+
+    size_t position_data_size = (sizeof(vector3) * data.vertex_count);
+    vector3* positions = (vector3*)malloc(position_data_size);
+    data.vertices.positions = positions;
+
+    size_t texcoord_data_size = (sizeof(vector2) * data.vertex_count);
+    vector2* texcoords = (vector2*)malloc(texcoord_data_size);
+    data.vertices.texcoords = texcoords;
+
+    vector3 center_offset = vector3_create((float)width * 0.5f, 0.0f,
+					   (float)height * 0.5f);
+    center_offset = vector3_scale(center_offset, scale);
+
     int vertex_index = 0;
 
-    vector3* positions = data.vertices.positions;
-
-    for(y = 0; y < resolution; ++y)
+    int x, y;
+    for(y = 0; y < height; ++y)
     {
-	for(x = 0; x < resolution; ++x)
+	for(x = 0; x < width; ++x)
 	{
-	    float height0 = height_data[x + (y + 1) * resolution];
-	    float height1 = height_data[(x + 1) + (y + 1) * resolution];
-	    float height2 = height_data[x + y * resolution];
-	    float height3 = height_data[(x + 1) + y * resolution];
+	    float height0 = heightmap_get(&heightmap, x,     y + 1);
+	    float height1 = heightmap_get(&heightmap, x + 1, y + 1);
+	    float height2 = heightmap_get(&heightmap, x,     y);
+	    float height3 = heightmap_get(&heightmap, x + 1, y);
+
+	    float x0 = (float)x * scale;
+	    float x1 = (float)(x + 1) * scale;
+	    float y0 = (float)y * scale;
+	    float y1 = (float)(y + 1) * scale;
 	    
-	    positions[vertex_index+0].y = height2;
-	    positions[vertex_index+1].y = height3;
-	    positions[vertex_index+2].y = height0;
-	    positions[vertex_index+3].y = height0;
-	    positions[vertex_index+4].y = height3;
-	    positions[vertex_index+5].y = height1;
+	    positions[vertex_index+0] =
+		vector3_subtract(vector3_create(x0, height2, y0), center_offset);
+	    positions[vertex_index+1] =
+		vector3_subtract(vector3_create(x1, height3, y0), center_offset);
+	    positions[vertex_index+2] =
+		vector3_subtract(vector3_create(x0, height0, y1), center_offset);
+	    positions[vertex_index+3] =
+		vector3_subtract(vector3_create(x0, height0, y1), center_offset);
+	    positions[vertex_index+4] =
+		vector3_subtract(vector3_create(x1, height3, y0), center_offset);
+	    positions[vertex_index+5] =
+		vector3_subtract(vector3_create(x1, height1, y1), center_offset);
+
+	    texcoords[vertex_index+0] = vector2_create(0.0f, 0.0f);
+	    texcoords[vertex_index+1] = vector2_create(1.0f, 0.0f);
+	    texcoords[vertex_index+2] = vector2_create(0.0f, 1.0f);
+	    texcoords[vertex_index+3] = vector2_create(0.0f, 1.0f);
+	    texcoords[vertex_index+4] = vector2_create(1.0f, 0.0f);
+	    texcoords[vertex_index+5] = vector2_create(1.0f, 1.0f);
 
 	    vertex_index += 6;
 	}
     }
-
-    free(height_data);
 
     return data;
 }

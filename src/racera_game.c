@@ -59,12 +59,6 @@ game_initialize(game_state* state)
 	state->cube = load_mesh(gl, mesh_create_cube(1.0f), 0);
 	mesh_data_free(&state->cube.data);
 
-	state->triangle = load_mesh(gl, mesh_create_triangle(1.0f), 0);
-	mesh_data_free(&state->triangle.data);
-
-	state->pointer = load_mesh(gl, mesh_create_circle(1.0f, 5), 0);
-	mesh_data_free(&state->pointer.data);
-
 	state->cup = load_mesh(gl, obj_load_from_file("models/cup.obj"), 0);
 	mesh_data_free(&state->cup.data);
 
@@ -103,15 +97,6 @@ game_initialize(game_state* state)
     state->camera_position = (vector3){{{-10.2f, 13.5f, -10.2f}}};
     state->camera_pitch_yaw_roll = vector3_create(-31.0f, -55.0f, 0.0f);
 
-    int n;
-    for_range(n, 50)
-    {
-	vector3 position = (vector3){{{platform_randomf(-50.0f, 50.0f),
-				       0.0f,
-				       platform_randomf(-50.0f, 50.0f)}}};
-	    
-	*(state->created_cube_positions + state->created_cube_count++) = position;
-    }
 	
     state->initialized = 1;
 }
@@ -235,15 +220,15 @@ game_update_and_render(game_state* state)
 
 	vector2 text_position = vector2_create((real32)state->screen_width * -0.48f,
 						(real32)state->screen_height * 0.45f);
-	ui_draw_label(state, text_position, timings_text, 32.0f, &state->deja_vu);
+	ui_draw_label(state, text_position, timings_text, 32.0f, 10.0f, &state->deja_vu);
 
 	text_position.y -= 46.0f;
 	
 	char camera_text[256];
-	platform_format(camera_text, 256, "cpos: %.2f %.2f %.2f\ncrot: %.2f %.2f",
+	platform_format(camera_text, 256, "camera p: %.2f %.2f %.2f\ncamera r: %.2f %.2f",
 			state->camera_position.x, state->camera_position.y, state->camera_position.x,
 			state->camera_pitch_yaw_roll.x, state->camera_pitch_yaw_roll.y);
-	ui_draw_label(state, text_position, camera_text, 26.0f, &state->deja_vu);
+	ui_draw_label(state, text_position, camera_text, 26.0f, 10.0f, &state->deja_vu);
 
 
 	matrix4 projection = matrix_orthographic((float)state->screen_width,

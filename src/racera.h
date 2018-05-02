@@ -49,8 +49,6 @@ struct game_state
 
     loaded_mesh ground;
     loaded_mesh cube;
-    loaded_mesh triangle;
-    loaded_mesh pointer;
     loaded_mesh quad;
     loaded_mesh cup;
 

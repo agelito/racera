@@ -10,6 +10,9 @@
 #include "../asset_import/obj_importer.c"
 
 #define create_vertex(x, y, z, color, uv_x, uv_y) (vertex){{{{x, y, z}}}, color, {{{uv_x, uv_y}}}}
+#define create_vertex_hash(x, y, z) ((int)(x * 1000.0f) & 0x3ff) |	\
+    (((int)(y * 1000.0f) & 0x3ff) << 10) |				\
+    (((int)(z * 1000.0f) & 0x3ff) << 20)
 
 loaded_mesh
 load_mesh(gl_functions* gl, mesh_data data, bool32 dynamic)
@@ -25,6 +28,18 @@ load_mesh(gl_functions* gl, mesh_data data, bool32 dynamic)
     if(dynamic)
     {
 	usage = GL_DYNAMIC_DRAW;
+    }
+
+    if(data.triangles)
+    {
+	uint32* index_buffer = &mesh.index_buffer;
+	gl->glGenBuffers(1, index_buffer);
+	gl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *index_buffer);
+
+	size_t index_buffer_size = (sizeof(uint32) * data.index_count);
+	gl->glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer_size, data.triangles, usage);
+
+	gl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
     
     if(data.vertices.positions)
@@ -79,6 +94,32 @@ load_mesh(gl_functions* gl, mesh_data data, bool32 dynamic)
 	VA_INCLUDE(mesh.attribute_mask, VA_COLORS_BIT);
     }
 
+    if(data.vertices.tangents)
+    {
+	vertex_buffer = (mesh.vertex_buffer + vertex_attributes_tangents);
+	gl->glGenBuffers(1, vertex_buffer);
+	gl->glBindBuffer(GL_ARRAY_BUFFER, *vertex_buffer);
+
+	vertex_buffer_size = (sizeof(vector3) * data.vertex_count);
+	gl->glBufferData(GL_ARRAY_BUFFER, vertex_buffer_size,
+			 data.vertices.tangents, usage);
+
+	VA_INCLUDE(mesh.attribute_mask, VA_TANGENTS_BIT);
+    }
+
+    if(data.vertices.binormals)
+    {
+	vertex_buffer = (mesh.vertex_buffer + vertex_attributes_binormals);
+	gl->glGenBuffers(1, vertex_buffer);
+	gl->glBindBuffer(GL_ARRAY_BUFFER, *vertex_buffer);
+
+	vertex_buffer_size = (sizeof(vector3) * data.vertex_count);
+	gl->glBufferData(GL_ARRAY_BUFFER, vertex_buffer_size,
+			 data.vertices.binormals, usage);
+
+	VA_INCLUDE(mesh.attribute_mask, VA_BINORMALS_BIT);
+    }
+
     gl->glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     return mesh;
@@ -90,6 +131,16 @@ update_mesh(gl_functions* gl, loaded_mesh* mesh, uint32 offset, uint32 count)
     GLuint* vertex_buffer = 0;
     size_t vertex_buffer_offset = 0;;
     size_t vertex_buffer_size = 0;
+
+    if(mesh->index_buffer && mesh->data.triangles)
+    {
+	gl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->index_buffer);
+
+	size_t index_buffer_offset = (offset * sizeof(uint32));
+	size_t index_buffer_size = (count * sizeof(uint32));
+	gl->glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, index_buffer_offset, index_buffer_size,
+			    mesh->data.triangles);
+    }
     
     if(VA_ISSET(mesh->attribute_mask, VA_POSITIONS_BIT))
     {
@@ -135,6 +186,28 @@ update_mesh(gl_functions* gl, loaded_mesh* mesh, uint32 offset, uint32 count)
 			    mesh->data.vertices.colors);
     }
 
+    if(VA_ISSET(mesh->attribute_mask, VA_TANGENTS_BIT))
+    {
+	vertex_buffer = (mesh->vertex_buffer + vertex_attributes_tangents);
+	gl->glBindBuffer(GL_ARRAY_BUFFER, *vertex_buffer);
+
+	vertex_buffer_offset = (offset * sizeof(vector3));
+	vertex_buffer_size = (count * sizeof(vector3));
+	gl->glBufferSubData(GL_ARRAY_BUFFER, vertex_buffer_offset, vertex_buffer_size,
+			    mesh->data.vertices.tangents);
+    }
+
+    if(VA_ISSET(mesh->attribute_mask, VA_BINORMALS_BIT))
+    {
+	vertex_buffer = (mesh->vertex_buffer + vertex_attributes_binormals);
+	gl->glBindBuffer(GL_ARRAY_BUFFER, *vertex_buffer);
+
+	vertex_buffer_offset = (offset * sizeof(vector3));
+	vertex_buffer_size = (count * sizeof(vector3));
+	gl->glBufferSubData(GL_ARRAY_BUFFER, vertex_buffer_offset, vertex_buffer_size,
+			    mesh->data.vertices.binormals);
+    }
+
     gl->glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
@@ -142,18 +215,17 @@ mesh_data
 mesh_create_quad()
 {
     mesh_data data = (mesh_data){0};
-    data.vertex_count = 6;
+    data.vertex_count = 4;
+    data.index_count = 6;
 
     real32 half_side = 0.5f;
 
     size_t position_data_size = (data.vertex_count * sizeof(vector3));
     vector3* positions = (vector3*)malloc(position_data_size);
     *(positions + 0) = vector3_create(-half_side, -half_side, 0.0f);
-    *(positions + 1) = vector3_create(half_side, -half_side, 0.0f);
-    *(positions + 2) = vector3_create(-half_side, half_side, 0.0f);
-    *(positions + 3) = vector3_create(-half_side, half_side, 0.0f);
-    *(positions + 4) = vector3_create(half_side, -half_side, 0.0f);
-    *(positions + 5) = vector3_create(half_side, half_side, 0.0f);
+    *(positions + 1) = vector3_create( half_side, -half_side, 0.0f);
+    *(positions + 2) = vector3_create(-half_side,  half_side, 0.0f);
+    *(positions + 3) = vector3_create( half_side,  half_side, 0.0f);
     data.vertices.positions = positions;
 
     size_t texcoord_data_size = (data.vertex_count * sizeof(vector2));
@@ -161,10 +233,20 @@ mesh_create_quad()
     *(texcoords + 0) = vector2_create(0.0f, 0.0f);
     *(texcoords + 1) = vector2_create(1.0f, 0.0f);
     *(texcoords + 2) = vector2_create(0.0f, 1.0f);
-    *(texcoords + 3) = vector2_create(0.0f, 1.0f);
-    *(texcoords + 4) = vector2_create(1.0f, 0.0f);
-    *(texcoords + 5) = vector2_create(1.0f, 1.0f);
+    *(texcoords + 3) = vector2_create(1.0f, 1.0f);
     data.vertices.texcoords = texcoords;
+
+    size_t triangle_data_size = (data.index_count * sizeof(uint32));
+    uint32* triangles = (uint32*)malloc(triangle_data_size);
+
+    *(triangles + 0) = 0;
+    *(triangles + 1) = 1;
+    *(triangles + 2) = 2;
+    *(triangles + 3) = 2;
+    *(triangles + 4) = 1;
+    *(triangles + 5) = 3;
+
+    data.triangles = triangles;
 
     return data;
 }
@@ -591,6 +673,12 @@ mesh_create_from_heightmap(heightmap heightmap, float resolution)
 void
 mesh_data_free(mesh_data* data)
 {
+    if(data->triangles)
+    {
+	free(data->triangles);
+	data->triangles = 0;
+    }
+    
     if(data->vertices.positions)
     {
 	free(data->vertices.positions);
@@ -614,6 +702,241 @@ mesh_data_free(mesh_data* data)
 	free(data->vertices.colors);
 	data->vertices.colors = 0;
     }
+
+    if(data->vertices.tangents)
+    {
+	free(data->vertices.tangents);
+	data->vertices.tangents = 0;
+    }
+
+    if(data->vertices.binormals)
+    {
+	free(data->vertices.binormals);
+	data->vertices.binormals = 0;
+    }
+}
+
+void
+mesh_generate_tangents(mesh_data* data)
+{
+    if(data->vertices.tangents)
+	free(data->vertices.tangents);
+    
+    if(data->vertices.binormals)
+	free(data->vertices.binormals);
+
+    data->vertices.tangents = 0;
+    data->vertices.binormals = 0;
+    
+    if(!data->vertices.positions)
+    {
+	platform_log("can't generate tangents without positions.\n");
+	return;
+    }
+    
+    if(!data->vertices.texcoords)
+    {
+	platform_log("can't generate tangents without texcoords.\n");
+	return;
+    }
+
+    size_t tangent_workset_size = sizeof(vector3) * data->vertex_count;
+    vector3* tangents = (vector3*)malloc(tangent_workset_size * 2);
+    vector3* binormals = (tangents + data->vertex_count);
+
+    uint32 workset_reset;
+    for_range(workset_reset, data->vertex_count)
+    {
+	*(tangents + workset_reset) = vector3_create(0.0f, 0.0f, 0.0f);
+	*(binormals + workset_reset) = vector3_create(0.0f, 0.0f, 0.0f);
+    }
+
+    uint32 triangle_count;
+    if(data->triangles)
+    {
+	triangle_count = data->index_count / 3;
+    }
+    else
+    {
+	triangle_count = data->vertex_count / 3;
+    }
+    
+    uint32 triangle;
+    for_range(triangle, triangle_count)
+    {
+	int vertex_index0;
+	int vertex_index1;
+	int vertex_index2;
+	
+	if(data->triangles)
+	{
+	    uint32* triangle_start =
+		(data->triangles + (triangle * 3));
+	    vertex_index0 = *(triangle_start + 0);
+	    vertex_index1 = *(triangle_start + 1);
+	    vertex_index2 = *(triangle_start + 2);
+	}
+	else
+	{
+	    int triangle_start = triangle * 3;
+	    vertex_index0 = triangle_start + 0;
+	    vertex_index1 = triangle_start + 1;
+	    vertex_index2 = triangle_start + 2;
+	}
+
+	vector3 vertex_position0 = *(data->vertices.positions + vertex_index0);
+	vector3 vertex_position1 = *(data->vertices.positions + vertex_index1);
+	vector3 vertex_position2 = *(data->vertices.positions + vertex_index2);
+
+	vector3 position_delta1 = vector3_subtract(vertex_position1, vertex_position0);
+	vector3 position_delta2 = vector3_subtract(vertex_position2, vertex_position0);
+
+	vector2 vertex_texcoord0 = *(data->vertices.texcoords + vertex_index0);
+	vector2 vertex_texcoord1 = *(data->vertices.texcoords + vertex_index1);
+	vector2 vertex_texcoord2 = *(data->vertices.texcoords + vertex_index2);
+
+	vector2 texcoord_delta1 = vector2_subtract(vertex_texcoord1, vertex_texcoord0);
+	vector2 texcoord_delta2 = vector2_subtract(vertex_texcoord2, vertex_texcoord0);
+
+	real32 r = 1.0f / (texcoord_delta1.x * texcoord_delta2.y -
+			   texcoord_delta1.y * texcoord_delta2.x);
+	
+	vector3 tangent = vector3_subtract(vector3_scale(position_delta1, texcoord_delta2.y),
+					   vector3_scale(position_delta2, texcoord_delta1.y));
+	tangent = vector3_scale(tangent, r);
+	
+	vector3 binormal = vector3_subtract(vector3_scale(position_delta2, texcoord_delta1.x),
+					     vector3_scale(position_delta1, texcoord_delta2.x));
+	binormal = vector3_scale(binormal, r);
+
+	*(tangents + vertex_index0) = vector3_add(tangent, *(tangents + vertex_index0));
+	*(tangents + vertex_index1) = vector3_add(tangent, *(tangents + vertex_index1));
+	*(tangents + vertex_index2) = vector3_add(tangent, *(tangents + vertex_index2));
+	
+	*(binormals + vertex_index0) = vector3_add(binormal, *(binormals + vertex_index0));
+	*(binormals + vertex_index1) = vector3_add(binormal, *(binormals + vertex_index1));
+	*(binormals + vertex_index2) = vector3_add(binormal, *(binormals + vertex_index2));
+    }
+
+    size_t tangents_output_size = sizeof(vector3) * data->vertex_count;
+    vector3* tangents_result = (vector3*)malloc(tangents_output_size);
+
+    size_t binormal_output_size = sizeof(vector3) * data->vertex_count;
+    vector3* binormals_result = (vector3*)malloc(binormal_output_size);
+
+    uint32 vertex;
+    for_range(vertex, data->vertex_count)
+    {
+	vector3 tangent = *(tangents + vertex);
+	tangent = vector3_normalize(tangent);
+	
+	vector3 binormal = *(binormals + vertex);
+	binormal = vector3_normalize(binormal);
+
+	*(tangents_result + vertex) = tangent;
+	*(binormals_result + vertex) = binormal;
+    }
+
+    data->vertices.tangents = tangents_result;
+    data->vertices.binormals = binormals_result;
+
+    free(tangents);
+}
+
+void
+mesh_generate_normals(mesh_data* data, bool32 from_center)
+{
+    if(data->vertices.normals)
+	free(data->vertices.normals);
+
+    data->vertices.normals = 0;
+    
+    if(!data->vertices.positions)
+    {
+	platform_log("can't generate normals without positions.\n");
+	return;
+    }
+
+    int vertex_count = data->vertex_count;
+
+    vector3* normals = (vector3*)malloc(sizeof(vector3) * vertex_count);
+
+    int vertex_index;
+    for_range(vertex_index, vertex_count)
+    {
+	*(normals + vertex_index) = vector3_create(0.0f, 0.0f, 0.0f);
+
+	if(from_center)
+	{
+	    vector3 position = *(data->vertices.positions + vertex_index);
+	    *(normals + vertex_index) = vector3_normalize(position);
+	}
+    }
+
+    if(!from_center)
+    {
+	int triangle_count;
+	if(data->triangles)
+	{
+	    triangle_count = data->index_count / 3;
+	}
+	else
+	{
+	    triangle_count = data->vertex_count / 3;
+	}
+
+	int triangle;
+	for_range(triangle, triangle_count)
+	{
+	    int vertex_index0;
+	    int vertex_index1;
+	    int vertex_index2;
+	
+	    if(data->triangles)
+	    {
+		uint32* triangle_start =
+		    (data->triangles + (triangle * 3));
+		vertex_index0 = *(triangle_start + 0);
+		vertex_index1 = *(triangle_start + 1);
+		vertex_index2 = *(triangle_start + 2);
+	    }
+	    else
+	    {
+		int triangle_start = triangle * 3;
+		vertex_index0 = triangle_start + 0;
+		vertex_index1 = triangle_start + 1;
+		vertex_index2 = triangle_start + 2;
+	    }
+
+	    vector3 position0 = *(data->vertices.positions + vertex_index0);
+	    vector3 position1 = *(data->vertices.positions + vertex_index1);
+	    vector3 position2 = *(data->vertices.positions + vertex_index2);
+
+	    vector3 delta0 = vector3_subtract(position1, position0);
+	    vector3 delta1 = vector3_subtract(position2, position0);
+
+	    vector3 normal = vector3_cross(delta1, delta0);
+	    normal = vector3_normalize(normal);
+
+	    vector3* normal0 = (normals + vertex_index0);
+	    *normal0 = vector3_add(*normal0, normal);
+
+	    vector3* normal1 = (normals + vertex_index1);
+	    *normal1 = vector3_add(*normal1, normal);
+
+	    vector3* normal2 = (normals + vertex_index2);
+	    *normal2 = vector3_add(*normal2, normal);
+	}
+
+	uint32 vertex_index;
+	for_range(vertex_index, data->vertex_count)
+	{
+	    vector3 normal = *(normals + vertex_index);
+	    *(normals + vertex_index) = vector3_normalize(normal);
+	}
+    }
+
+    data->vertices.normals = normals;
 }
 
 #undef create_vertex

@@ -20,6 +20,15 @@ vector2_scale(vector2 a, float s)
     return result;
 }
 
+vector2
+vector2_subtract(vector2 a, vector2 b)
+{
+    vector2 result;
+    result.x = a.x - b.x;
+    result.y = a.y - b.y;
+    return result;
+}
+
 float
 vector3_magnitude(vector3 input)
 {

@@ -116,15 +116,19 @@ mesh_layout_for_shader(gl_functions* gl, loaded_mesh* mesh, shader_program* shad
     int color_location = gl->glGetAttribLocation(shader->program, "in_color");
     int texcoord_location = gl->glGetAttribLocation(shader->program, "in_uv");
     int normal_location = gl->glGetAttribLocation(shader->program, "in_normal");
+    int tangent_location = gl->glGetAttribLocation(shader->program, "in_tangent");
+    int binormal_location = gl->glGetAttribLocation(shader->program, "in_binormal");
 
     if(position_location != -1) VA_INCLUDE(shader_attributes, VA_POSITIONS_BIT);
     if(normal_location != -1)   VA_INCLUDE(shader_attributes, VA_NORMALS_BIT);
     if(texcoord_location != -1) VA_INCLUDE(shader_attributes, VA_TEXCOORDS_BIT);
     if(color_location != -1)    VA_INCLUDE(shader_attributes, VA_COLORS_BIT);
+    if(tangent_location != -1)  VA_INCLUDE(shader_attributes, VA_TANGENTS_BIT);
+    if(binormal_location != -1) VA_INCLUDE(shader_attributes, VA_BINORMALS_BIT);
 
-    int attribute_mask = (shader_attributes & mesh->attribute_mask);
+    uint32 attribute_mask = (shader_attributes & mesh->attribute_mask);
     
-    int i;
+    uint32 i;
     for_range(i, mesh->layout_count)
     {
 	input_layout* check = (mesh->layouts + i);
@@ -143,6 +147,11 @@ mesh_layout_for_shader(gl_functions* gl, loaded_mesh* mesh, shader_program* shad
 
 	gl->glGenVertexArrays(1, &layout->vertex_array);
 	gl->glBindVertexArray(layout->vertex_array);
+
+	if(mesh->index_buffer)
+	{
+	    gl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->index_buffer);
+	}
 
 	if(VA_ISSET(attribute_mask, VA_POSITIONS_BIT))
 	{
@@ -170,6 +179,20 @@ mesh_layout_for_shader(gl_functions* gl, loaded_mesh* mesh, shader_program* shad
 	    gl->glBindBuffer(GL_ARRAY_BUFFER, *(mesh->vertex_buffer + vertex_attributes_colors));
 	    gl->glEnableVertexAttribArray(color_location);
 	    gl->glVertexAttribPointer(color_location, 3, GL_FLOAT, GL_FALSE, sizeof(color), 0);
+	}
+
+	if(VA_ISSET(attribute_mask, VA_TANGENTS_BIT))
+	{
+	    gl->glBindBuffer(GL_ARRAY_BUFFER, *(mesh->vertex_buffer + vertex_attributes_tangents));
+	    gl->glEnableVertexAttribArray(tangent_location);
+	    gl->glVertexAttribPointer(tangent_location, 3, GL_FLOAT, GL_FALSE, sizeof(vector3), 0);
+	}
+
+	if(VA_ISSET(attribute_mask, VA_BINORMALS_BIT))
+	{
+	    gl->glBindBuffer(GL_ARRAY_BUFFER, *(mesh->vertex_buffer + vertex_attributes_normals));
+	    gl->glEnableVertexAttribArray(binormal_location);
+	    gl->glVertexAttribPointer(binormal_location, 3, GL_FLOAT, GL_FALSE, sizeof(vector3), 0);
 	}
     }
 
@@ -269,8 +292,16 @@ renderer_queue_push_draw(render_queue* queue, loaded_mesh* mesh, material* mater
     draw.material = material;
     draw.transform = transform;
 
-    draw.draw_element_offset = 0;
-    draw.draw_element_count = mesh->data.vertex_count;
+    if(mesh->data.index_count)
+    {
+	draw.draw_element_offset = 0;
+	draw.draw_element_count = mesh->data.index_count;
+    }
+    else
+    {
+	draw.draw_element_offset = 0;
+	draw.draw_element_count = mesh->data.vertex_count;
+    }
     
     renderer_queue_push_item(queue, render_queue_type_draw, &draw, sizeof(render_queue_draw));
 }
@@ -495,7 +526,9 @@ renderer_queue_process(render_queue* queue)
 
 	    renderer_apply_uniforms(gl, shader, &queue->uniforms_per_object);
 
-#if 0 // TODO: Implement index buffers.
+	    // TODO: Make the choice about drawing arrays or elements earlier in the pipeline,
+	    // remove the requirement for branching here.
+	    
 	    if(!mesh->index_buffer)
 	    {
 		glDrawArrays(GL_TRIANGLES, draw->draw_element_offset, draw->draw_element_count);
@@ -505,8 +538,6 @@ renderer_queue_process(render_queue* queue)
 		glDrawElements(GL_TRIANGLES, draw->draw_element_count,
 			       GL_UNSIGNED_INT, (void*)0);
 	    }
-#endif
-	    glDrawArrays(GL_TRIANGLES, draw->draw_element_offset, draw->draw_element_count);
 	} break;
 	}
 

@@ -11,6 +11,7 @@
 GL_PROC_DEC(glGenVertexArrays, GLsizei n, GLuint* arrays);
 GL_PROC_DEC(glBindVertexArray, GLuint array);
 GL_PROC_DEC(glGenBuffers, GLsizei n, GLuint* buffers);
+GL_PROC_DEC(glDeleteBuffers, GLsizei n, GLuint* buffers);
 GL_PROC_DEC(glBindBuffer, GLenum target, GLuint buffer);
 GL_PROC_DEC(glBufferData, GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usage);
 GL_PROC_DEC(glBufferSubData, GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* data);
@@ -51,6 +52,7 @@ typedef struct
     GL_PROC_DEF(glGenVertexArrays);
     GL_PROC_DEF(glBindVertexArray);
     GL_PROC_DEF(glGenBuffers);
+    GL_PROC_DEF(glDeleteBuffers);
     GL_PROC_DEF(glBindBuffer);
     GL_PROC_DEF(glBufferData);
     GL_PROC_DEF(glBufferSubData);

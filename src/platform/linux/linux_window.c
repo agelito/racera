@@ -10,7 +10,30 @@ typedef struct
 
     int pointer_is_grabbed;
     Cursor empty_cursor;
+
+    // NOTE: glX extension functions.
+    PFNGLXSWAPINTERVALEXTPROC glXSwapIntervalEXT;
 }  window_x11;
+
+static int
+glx_extension_available(GLubyte* extension)
+{
+    ((void)extension);
+    
+    // TODO: Actually check extensions string.
+    return 1;
+}
+
+static void
+glx_init_extension_functions(window_x11* window)
+{
+    GLubyte* swap_interval = (GLubyte*)"glXSwapIntervalEXT";
+    if(glx_extension_available(swap_interval))
+    {
+	window->glXSwapIntervalEXT =
+	    (PFNGLXSWAPINTERVALEXTPROC)glXGetProcAddressARB(swap_interval);
+    }
+}
 
 static window_x11
 create_window(int width, int height, char* title)
@@ -82,12 +105,21 @@ create_window(int width, int height, char* title)
     GLXContext gl_context = glXCreateContext(display, visual_info, NULL, GL_TRUE);
     glXMakeCurrent(display, window, gl_context);
 
+    
+
     window_x11 window_context;
     window_context.display = display;
     window_context.window = window;
     window_context.empty_cursor = empty_cursor;
     window_context.pointer_is_grabbed =
 	mouse_x11_grab(display, window);
+
+    glx_init_extension_functions(&window_context);
+    
+    if(window_context.glXSwapIntervalEXT)
+    {
+	window_context.glXSwapIntervalEXT(display, window, 0);
+    }
 
     return window_context;
 }

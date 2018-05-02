@@ -592,11 +592,18 @@ mesh_create_plane_xz(float side, int subdivisions)
 mesh_data
 mesh_create_from_heightmap(heightmap heightmap, float resolution)
 {
-    int width = (int)(heightmap.width * resolution);
-    int height = (int)(heightmap.height * resolution);
+    float world_width = (float)heightmap.width;
+    float world_height = (float)heightmap.height;
+    
+    int vertex_width = (int)(heightmap.width * resolution);
+    int vertex_height = (int)(heightmap.height * resolution);
+
+    int width_minus_one = vertex_width - 1;
+    int height_minus_one = vertex_height - 1;
     
     mesh_data data = (mesh_data){0};
-    data.vertex_count = (width * height) * 6;
+    data.vertex_count = (vertex_width * vertex_height);
+    data.index_count = (width_minus_one * height_minus_one) * 6;
 
     size_t position_data_size = (sizeof(vector3) * data.vertex_count);
     vector3* positions = (vector3*)malloc(position_data_size);
@@ -606,65 +613,43 @@ mesh_create_from_heightmap(heightmap heightmap, float resolution)
     vector2* texcoords = (vector2*)malloc(texcoord_data_size);
     data.vertices.texcoords = texcoords;
 
-    vector3 center_offset = vector3_create((float)width * 0.5f, 0.0f, (float)height * 0.5f);
-    center_offset = vector3_scale(center_offset, 1.0f / resolution);
+    size_t triangles_data_size = (sizeof(uint32) * data.index_count);
+    uint32* triangles = (uint32*)malloc(triangles_data_size);
+    data.triangles = triangles;
 
-    int vertex_index = 0;
-
-    float stepX = 1.0f / resolution;
-    float stepY = 1.0f / resolution;
-
-    float positionX = 0.0f;
-    float positionY = 0.0f;
+    vector3 center_offset = vector3_create(world_width * 0.5f, 0.0f, world_height * 0.5f);
 
     int x, y;
-    for(y = 0; y < height; ++y)
+    for(y = 0; y < vertex_height; ++y)
     {
-	positionX = 0.0f;
-	
-	for(x = 0; x < width; ++x)
+	float v = (float)y / height_minus_one;
+	for(x = 0; x < vertex_width; ++x)
 	{
-	    float u0 = (float)x / width;
-	    float u1 = (float)(x + 1) / width;
-	    float v0 = (float)y / height;
-	    float v1 = (float)(y + 1) / height;
+	    float u = (float)x / width_minus_one;
 	    
-	    float height0 = heightmap_sample(&heightmap, u0, v1);
-	    float height1 = heightmap_sample(&heightmap, u1, v1);
-	    float height2 = heightmap_sample(&heightmap, u0, v0);
-	    float height3 = heightmap_sample(&heightmap, u1, v0);
+	    float height_y = heightmap_sample(&heightmap, u, v);
+	    vector3 position = vector3_create(u * world_width, height_y, v * world_height);
 
-	    float x0 = (float)positionX;
-	    float x1 = (float)positionX + stepX;
-	    float y0 = (float)positionY;
-	    float y1 = (float)positionY + stepY;
-	    
-	    positions[vertex_index+0] =
-		vector3_subtract(vector3_create(x0, height2, y0), center_offset);
-	    positions[vertex_index+1] =
-		vector3_subtract(vector3_create(x1, height3, y0), center_offset);
-	    positions[vertex_index+2] =
-		vector3_subtract(vector3_create(x0, height0, y1), center_offset);
-	    positions[vertex_index+3] =
-		vector3_subtract(vector3_create(x0, height0, y1), center_offset);
-	    positions[vertex_index+4] =
-		vector3_subtract(vector3_create(x1, height3, y0), center_offset);
-	    positions[vertex_index+5] =
-		vector3_subtract(vector3_create(x1, height1, y1), center_offset);
+	    int vertex = x + y * vertex_width;
+	    positions[vertex] = vector3_subtract(position, center_offset);
+	    texcoords[vertex] = vector2_create(u, v);
+	}
+    }
 
-	    texcoords[vertex_index+0] = vector2_create(0.0f, 0.0f);
-	    texcoords[vertex_index+1] = vector2_create(1.0f, 0.0f);
-	    texcoords[vertex_index+2] = vector2_create(0.0f, 1.0f);
-	    texcoords[vertex_index+3] = vector2_create(0.0f, 1.0f);
-	    texcoords[vertex_index+4] = vector2_create(1.0f, 0.0f);
-	    texcoords[vertex_index+5] = vector2_create(1.0f, 1.0f);
+    int vertex_index = 0;
+    for(y = 0; y < height_minus_one; ++y)
+    {
+	for(x = 0; x < width_minus_one; ++x)
+	{
+	    triangles[vertex_index + 0] =  x       +  y      * vertex_width;
+	    triangles[vertex_index + 1] = (x + 1)  +  y      * vertex_width;
+	    triangles[vertex_index + 2] =  x       + (y + 1) * vertex_width;
+	    triangles[vertex_index + 3] =  x       + (y + 1) * vertex_width;
+	    triangles[vertex_index + 4] = (x + 1)  +  y      * vertex_width;
+	    triangles[vertex_index + 5] = (x + 1)  + (y + 1) * vertex_width;
 
 	    vertex_index += 6;
-
-	    positionX += stepX;
 	}
-
-	positionY += stepY;
     }
 
     return data;

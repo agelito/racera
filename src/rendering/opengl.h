@@ -47,6 +47,8 @@ GL_PROC_DEC(glUniform4iv, GLint location, GLsizei count, const GLint* value);
 
 GL_PROC_DEC(glGenerateMipmap, GLenum target);
 
+GL_PROC_DEC(glPolygonMode, GLenum face, GLenum mode);
+
 typedef struct
 {
     GL_PROC_DEF(glGenVertexArrays);
@@ -88,6 +90,8 @@ typedef struct
     GL_PROC_DEF(glUniform4iv);    
     
     GL_PROC_DEF(glGenerateMipmap);
+
+    GL_PROC_DEF(glPolygonMode);
 } gl_functions;
 
 void* gl_get_address(const GLubyte* function);

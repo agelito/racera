@@ -61,5 +61,7 @@ gl_functions load_gl_functions()
     
     gl.glGenerateMipmap = GL_PROC_ADDR(glGenerateMipmap);
 
+    gl.glPolygonMode = GL_PROC_ADDR(glPolygonMode);
+
     return gl;
 }

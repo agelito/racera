@@ -48,9 +48,13 @@ game_initialize(game_state* state)
     { // NOTE: Load Meshes
 	platform_log("load meshes\n");
 
-	texture_data heightmap_texture = texture_create_from_tga("heightmaps/uppsala/uppsala_south.tga");
-	state->heightmap = heightmap_load_from_texture(heightmap_texture, 500, 500, 100.0f);
+	texture_data heightmap_texture =
+	    texture_create_from_tga("heightmaps/uppsala/uppsala_south.tga");
+	
+	state->heightmap = heightmap_load_from_texture(heightmap_texture, 1024, 1024, 100.0f);
 	texture_data_free(&heightmap_texture);
+
+	
 	
 	state->ground =
 	    load_mesh(gl, mesh_create_from_heightmap(state->heightmap, state->ground_resolution), 0);
@@ -168,7 +172,7 @@ game_update_and_render(game_state* state)
 
     if(keyboard_is_pressed(&state->keyboard, VKEY_G))
     {
-	state->ground_resolution += 0.2f;
+	state->ground_resolution += 1.0f;
 
 	state->ground = load_mesh(&state->gl, mesh_create_from_heightmap(state->heightmap,
 									 state->ground_resolution), 0);
@@ -177,7 +181,10 @@ game_update_and_render(game_state* state)
 
     if(keyboard_is_pressed(&state->keyboard, VKEY_H))
     {
-	state->ground_resolution -= 0.2f;
+	state->ground_resolution -= 1.0f;
+
+	if(state->ground_resolution <= 1.0f)
+	    state->ground_resolution = 1.0f;
 
 	state->ground =
 	    load_mesh(&state->gl, mesh_create_from_heightmap(state->heightmap,
@@ -220,9 +227,9 @@ game_update_and_render(game_state* state)
 
 	vector2 text_position = vector2_create((real32)state->screen_width * -0.48f,
 						(real32)state->screen_height * 0.45f);
-	ui_draw_label(state, text_position, timings_text, 32.0f, 10.0f, &state->deja_vu);
+	ui_draw_label(state, text_position, timings_text, 26.0f, 10.0f, &state->deja_vu);
 
-	text_position.y -= 46.0f;
+	text_position.y -= 26.0f;
 	
 	char camera_text[256];
 	platform_format(camera_text, 256, "camera p: %.2f %.2f %.2f\ncamera r: %.2f %.2f",

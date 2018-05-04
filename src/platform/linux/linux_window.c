@@ -105,8 +105,6 @@ create_window(int width, int height, char* title)
     GLXContext gl_context = glXCreateContext(display, visual_info, NULL, GL_TRUE);
     glXMakeCurrent(display, window, gl_context);
 
-    
-
     window_x11 window_context;
     window_context.display = display;
     window_context.window = window;
@@ -118,7 +116,7 @@ create_window(int width, int height, char* title)
     
     if(window_context.glXSwapIntervalEXT)
     {
-	window_context.glXSwapIntervalEXT(display, window, 0);
+	window_context.glXSwapIntervalEXT(display, window, 1);
     }
 
     return window_context;

@@ -590,20 +590,17 @@ mesh_create_plane_xz(float side, int subdivisions)
 }
 
 mesh_data
-mesh_create_from_heightmap(heightmap heightmap, float resolution)
+mesh_create_from_heightmap(heightmap heightmap,
+			   float world_x, float world_y, float world_width, float world_height,
+			   int heightmap_x, int heightmap_y, int heightmap_w,  int heightmap_h,
+			   int resolution_w, int resolution_h)
 {
-    float world_width = (float)heightmap.width;
-    float world_height = (float)heightmap.height;
-    
-    int vertex_width = (int)(heightmap.width * resolution);
-    int vertex_height = (int)(heightmap.height * resolution);
-
-    int width_minus_one = vertex_width - 1;
-    int height_minus_one = vertex_height - 1;
+    int width_minus_one  = resolution_w - 1;
+    int height_minus_one = resolution_h - 1;
     
     mesh_data data = (mesh_data){0};
-    data.vertex_count = (vertex_width * vertex_height);
-    data.index_count = (width_minus_one * height_minus_one) * 6;
+    data.vertex_count = (resolution_w * resolution_h);
+    data.index_count  = (width_minus_one * height_minus_one) * 6;
 
     size_t position_data_size = (sizeof(vector3) * data.vertex_count);
     vector3* positions = (vector3*)malloc(position_data_size);
@@ -619,18 +616,31 @@ mesh_create_from_heightmap(heightmap heightmap, float resolution)
 
     vector3 center_offset = vector3_create(world_width * 0.5f, 0.0f, world_height * 0.5f);
 
+    float one_over_heightmap_w = 1.0f / heightmap.width;
+    float one_over_heightmap_h = 1.0f / heightmap.height;
+
     int x, y;
-    for(y = 0; y < vertex_height; ++y)
+    for(y = 0; y < resolution_h; ++y)
     {
 	float v = (float)y / height_minus_one;
-	for(x = 0; x < vertex_width; ++x)
+
+	float heightmap_sample_y = (float)heightmap_y + heightmap_h * v;
+	float v_h = heightmap_sample_y * one_over_heightmap_h;
+
+	for(x = 0; x < resolution_w; ++x)
 	{
 	    float u = (float)x / width_minus_one;
+
+	    float heightmap_sample_x =(float)heightmap_x + heightmap_w * u;
+	    float u_h = heightmap_sample_x * one_over_heightmap_w;
 	    
-	    float height_y = heightmap_sample(&heightmap, u, v);
+	    float height_y = heightmap_sample(&heightmap, u_h, v_h);
 	    vector3 position = vector3_create(u * world_width, height_y, v * world_height);
 
-	    int vertex = x + y * vertex_width;
+	    position.x += world_x;
+	    position.z += world_y;
+
+	    int vertex = x + y * resolution_w;
 	    positions[vertex] = vector3_subtract(position, center_offset);
 	    texcoords[vertex] = vector2_create(u, v);
 	}
@@ -641,12 +651,12 @@ mesh_create_from_heightmap(heightmap heightmap, float resolution)
     {
 	for(x = 0; x < width_minus_one; ++x)
 	{
-	    triangles[vertex_index + 0] =  x       +  y      * vertex_width;
-	    triangles[vertex_index + 1] = (x + 1)  +  y      * vertex_width;
-	    triangles[vertex_index + 2] =  x       + (y + 1) * vertex_width;
-	    triangles[vertex_index + 3] =  x       + (y + 1) * vertex_width;
-	    triangles[vertex_index + 4] = (x + 1)  +  y      * vertex_width;
-	    triangles[vertex_index + 5] = (x + 1)  + (y + 1) * vertex_width;
+	    triangles[vertex_index + 0] =  x       +  y      * resolution_w;
+	    triangles[vertex_index + 1] = (x + 1)  +  y      * resolution_w;
+	    triangles[vertex_index + 2] =  x       + (y + 1) * resolution_w;
+	    triangles[vertex_index + 3] =  x       + (y + 1) * resolution_w;
+	    triangles[vertex_index + 4] = (x + 1)  +  y      * resolution_w;
+	    triangles[vertex_index + 5] = (x + 1)  + (y + 1) * resolution_w;
 
 	    vertex_index += 6;
 	}

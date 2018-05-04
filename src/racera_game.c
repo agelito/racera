@@ -22,7 +22,7 @@ game_initialize(game_state* state)
     state->gl = load_gl_functions();
     gl_functions* gl = &state->gl;
 
-    state->ground_resolution = 1.0f;
+    // gl->glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     state->render_queue = renderer_queue_create(gl, KB(64), KB(16));
 
@@ -49,15 +49,20 @@ game_initialize(game_state* state)
 	platform_log("load meshes\n");
 
 	texture_data heightmap_texture =
-	    texture_create_from_tga("heightmaps/uppsala/uppsala_south.tga");
+	    texture_create_from_tga("heightmaps/heightmap.tga");
 	
-	state->heightmap = heightmap_load_from_texture(heightmap_texture, 1024, 1024, 100.0f);
+	state->heightmap = heightmap_load_from_texture(heightmap_texture, 1000, 1000, 200.0f);
 	texture_data_free(&heightmap_texture);
 
+	state->ground_resolution = 1000;
 	
-	
-	state->ground =
-	    load_mesh(gl, mesh_create_from_heightmap(state->heightmap, state->ground_resolution), 0);
+	state->ground = load_mesh(gl, mesh_create_from_heightmap(state->heightmap,
+								 0.0f, 0.0f, 4000.0f, 4000.0f,
+								 0, 0,
+								 state->heightmap.width,
+								 state->heightmap.height,
+								 state->ground_resolution,
+								 state->ground_resolution), 0);
 	mesh_data_free(&state->ground.data);
     
 	state->cube = load_mesh(gl, mesh_create_cube(1.0f), 0);
@@ -75,6 +80,10 @@ game_initialize(game_state* state)
     { // NOTE: Load Textures
 	state->checker = load_texture(gl, texture_create_checker(256, 256, 64));
 	texture_data_free(&state->checker.data);
+
+	state->ground_texture =
+	    load_texture(gl, texture_create_from_tga("heightmaps/heightmap.tga"));
+	texture_data_free(&state->ground_texture.data);
     }
 
     { // NOTE: Load Fonts
@@ -89,7 +98,8 @@ game_initialize(game_state* state)
 	platform_log("load materials\n");
 
 	state->ground_material = material_create(&state->textured, KB(1));
-	material_set_texture(&state->ground_material, "main_texture", &state->checker);
+	material_set_texture(&state->ground_material, "main_texture", &state->ground_texture);
+	material_set_color(&state->ground_material, "color", vector4_create(1.0f, 1.0f, 1.0f, 1.0f));
 	
 	state->cup_material = material_create(&state->visualize_normals, KB(1));
 
@@ -172,23 +182,35 @@ game_update_and_render(game_state* state)
 
     if(keyboard_is_pressed(&state->keyboard, VKEY_G))
     {
-	state->ground_resolution += 1.0f;
+	state->ground_resolution *= 2;
+
 
 	state->ground = load_mesh(&state->gl, mesh_create_from_heightmap(state->heightmap,
+									 0.0f, 0.0f, 4000.0f, 4000.0f,
+									 0, 0,
+									 state->heightmap.width,
+									 state->heightmap.height,
+									 state->ground_resolution,
 									 state->ground_resolution), 0);
 	mesh_data_free(&state->ground.data);
     }
 
     if(keyboard_is_pressed(&state->keyboard, VKEY_H))
     {
-	state->ground_resolution -= 1.0f;
+	state->ground_resolution /= 2;
+	if(state->ground_resolution < 2)
+	{
+	    state->ground_resolution = 2;
+	}
 
-	if(state->ground_resolution <= 1.0f)
-	    state->ground_resolution = 1.0f;
+	state->ground = load_mesh(&state->gl, mesh_create_from_heightmap(state->heightmap,
+									 0.0f, 0.0f, 4000.0f, 4000.0f,
+									 0, 0,
+									 state->heightmap.width,
+									 state->heightmap.height,
+									 state->ground_resolution,
+									 state->ground_resolution), 0);
 
-	state->ground =
-	    load_mesh(&state->gl, mesh_create_from_heightmap(state->heightmap,
-							     state->ground_resolution), 0);
 	mesh_data_free(&state->ground.data);
     }
 
@@ -236,6 +258,13 @@ game_update_and_render(game_state* state)
 			state->camera_position.x, state->camera_position.y, state->camera_position.x,
 			state->camera_pitch_yaw_roll.x, state->camera_pitch_yaw_roll.y);
 	ui_draw_label(state, text_position, camera_text, 26.0f, 10.0f, &state->deja_vu);
+
+
+	text_position.y -= 52.0f;
+	
+	char resolution_text[256];
+	platform_format(resolution_text, 256, "ground resolution: %d", state->ground_resolution);
+	ui_draw_label(state, text_position, resolution_text, 26.0f, 10.0f, &state->deja_vu);
 
 
 	matrix4 projection = matrix_orthographic((float)state->screen_width,

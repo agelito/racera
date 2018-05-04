@@ -86,7 +86,10 @@ mesh_data mesh_create_triangle(float side);
 mesh_data mesh_create_circle(float radius, int subdivisions);
 mesh_data mesh_create_cube(float side);
 mesh_data mesh_create_plane_xz(float side, int subdivisions);
-mesh_data mesh_create_from_heightmap(heightmap heightmap, float resolution);
+mesh_data mesh_create_from_heightmap(heightmap heightmap,
+				     float world_x, float world_y, float world_width, float world_height,
+				     int heightmap_x, int heightmap_y, int heightmap_w,  int heightmap_h,
+				     int resolution_w, int resolution_h);
 void mesh_data_free(mesh_data* data);
 
 void mesh_generate_tangents(mesh_data* data);

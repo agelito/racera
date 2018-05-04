@@ -53,6 +53,7 @@ struct game_state
     loaded_mesh cup;
 
     loaded_texture checker;
+    loaded_texture ground_texture;
 
     loaded_font deja_vu;
 
@@ -67,7 +68,7 @@ struct game_state
     int created_cube_count;
     vector3 created_cube_positions[MAX_CUBES];
 
-    float ground_resolution;
+    int ground_resolution;
 
     heightmap heightmap;
 };

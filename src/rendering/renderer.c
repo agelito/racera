@@ -7,8 +7,8 @@
 #include "texture.c"
 #include "material.c"
 
-#define glUniformScalar(type, u, c, d) gl->type(u->location, c, (void*)d)
-#define glUniformMatrix(type, u, c, d) gl->type(u->location, c, GL_FALSE, (void*)d)
+#define glUniformScalar(type, u, c, d) GL_CALL(type, u->location, c, (void*)d)
+#define glUniformMatrix(type, u, c, d) GL_CALL(type, u->location, c, GL_FALSE, (void*)d)
 
 typedef enum render_queue_type render_queue_type;
 
@@ -45,7 +45,7 @@ struct render_queue_draw
 };
 
 static void
-renderer_upload_uniform(gl_functions* gl, shader_uniform* uniform, int count, unsigned char* data)
+renderer_upload_uniform(shader_uniform* uniform, int count, unsigned char* data)
 {
     switch(uniform->type)
     {
@@ -90,7 +90,7 @@ renderer_upload_uniform(gl_functions* gl, shader_uniform* uniform, int count, un
 }
 
 void
-renderer_apply_uniforms(gl_functions* gl, shader_program* shader, shader_uniform_group* group)
+renderer_apply_uniforms(shader_program* shader, shader_uniform_group* group)
 {
     shader_reflection* info = &shader->info;
 
@@ -102,22 +102,22 @@ renderer_apply_uniforms(gl_functions* gl, shader_program* shader, shader_uniform
 	if(!data.size) continue;
 
 	int count = data.size / uniform->size_per_element;
-	renderer_upload_uniform(gl, uniform, count, data.data);
+	renderer_upload_uniform(uniform, count, data.data);
     }
 }
 
 static input_layout*
-mesh_layout_for_shader(gl_functions* gl, loaded_mesh* mesh, shader_program* shader)
+mesh_layout_for_shader(loaded_mesh* mesh, shader_program* shader)
 {
     input_layout* layout = 0;
 
     int shader_attributes = 0;
-    int position_location = gl->glGetAttribLocation(shader->program, "in_vertex");
-    int color_location = gl->glGetAttribLocation(shader->program, "in_color");
-    int texcoord_location = gl->glGetAttribLocation(shader->program, "in_uv");
-    int normal_location = gl->glGetAttribLocation(shader->program, "in_normal");
-    int tangent_location = gl->glGetAttribLocation(shader->program, "in_tangent");
-    int binormal_location = gl->glGetAttribLocation(shader->program, "in_binormal");
+    int position_location = GL_CALL(glGetAttribLocation, shader->program, "in_vertex");
+    int color_location	  = GL_CALL(glGetAttribLocation, shader->program, "in_color");
+    int texcoord_location = GL_CALL(glGetAttribLocation, shader->program, "in_uv");
+    int normal_location	  = GL_CALL(glGetAttribLocation, shader->program, "in_normal");
+    int tangent_location  = GL_CALL(glGetAttribLocation, shader->program, "in_tangent");
+    int binormal_location = GL_CALL(glGetAttribLocation, shader->program, "in_binormal");
 
     if(position_location != -1) VA_INCLUDE(shader_attributes, VA_POSITIONS_BIT);
     if(normal_location != -1)   VA_INCLUDE(shader_attributes, VA_NORMALS_BIT);
@@ -145,54 +145,54 @@ mesh_layout_for_shader(gl_functions* gl, loaded_mesh* mesh, shader_program* shad
 	layout = (mesh->layouts + mesh->layout_count++);
 	layout->attribute_mask = attribute_mask;
 
-	gl->glGenVertexArrays(1, &layout->vertex_array);
-	gl->glBindVertexArray(layout->vertex_array);
+	GL_CALL(glGenVertexArrays, 1, &layout->vertex_array);
+	GL_CALL(glBindVertexArray, layout->vertex_array);
 
 	if(mesh->index_buffer)
 	{
-	    gl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->index_buffer);
+	    GL_CALL(glBindBuffer, GL_ELEMENT_ARRAY_BUFFER, mesh->index_buffer);
 	}
 
 	if(VA_ISSET(attribute_mask, VA_POSITIONS_BIT))
 	{
-	    gl->glBindBuffer(GL_ARRAY_BUFFER, *(mesh->vertex_buffer + vertex_attributes_positions));
-	    gl->glEnableVertexAttribArray(position_location);
-	    gl->glVertexAttribPointer(position_location, 3, GL_FLOAT, GL_FALSE, sizeof(vector3), 0);
+	    GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, *(mesh->vertex_buffer + vertex_attributes_positions));
+	    GL_CALL(glEnableVertexAttribArray, position_location);
+	    GL_CALL(glVertexAttribPointer, position_location, 3, GL_FLOAT, GL_FALSE, sizeof(vector3), 0);
 	}
 
 	if(VA_ISSET(attribute_mask, VA_NORMALS_BIT))
 	{
-	    gl->glBindBuffer(GL_ARRAY_BUFFER, *(mesh->vertex_buffer + vertex_attributes_normals));
-	    gl->glEnableVertexAttribArray(normal_location);
-	    gl->glVertexAttribPointer(normal_location, 3, GL_FLOAT, GL_FALSE, sizeof(vector3), 0);
+	    GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, *(mesh->vertex_buffer + vertex_attributes_normals));
+	    GL_CALL(glEnableVertexAttribArray, normal_location);
+	    GL_CALL(glVertexAttribPointer, normal_location, 3, GL_FLOAT, GL_FALSE, sizeof(vector3), 0);
 	}
 
 	if(VA_ISSET(attribute_mask, VA_TEXCOORDS_BIT))
 	{
-	    gl->glBindBuffer(GL_ARRAY_BUFFER, *(mesh->vertex_buffer + vertex_attributes_texcoords));
-	    gl->glEnableVertexAttribArray(texcoord_location);
-	    gl->glVertexAttribPointer(texcoord_location, 2, GL_FLOAT, GL_FALSE, sizeof(vector2), 0);
+	    GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, *(mesh->vertex_buffer + vertex_attributes_texcoords));
+	    GL_CALL(glEnableVertexAttribArray, texcoord_location);
+	    GL_CALL(glVertexAttribPointer, texcoord_location, 2, GL_FLOAT, GL_FALSE, sizeof(vector2), 0);
 	}
 
 	if(VA_ISSET(attribute_mask, VA_COLORS_BIT))
 	{
-	    gl->glBindBuffer(GL_ARRAY_BUFFER, *(mesh->vertex_buffer + vertex_attributes_colors));
-	    gl->glEnableVertexAttribArray(color_location);
-	    gl->glVertexAttribPointer(color_location, 3, GL_FLOAT, GL_FALSE, sizeof(color), 0);
+	    GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, *(mesh->vertex_buffer + vertex_attributes_colors));
+	    GL_CALL(glEnableVertexAttribArray, color_location);
+	    GL_CALL(glVertexAttribPointer, color_location, 3, GL_FLOAT, GL_FALSE, sizeof(color), 0);
 	}
 
 	if(VA_ISSET(attribute_mask, VA_TANGENTS_BIT))
 	{
-	    gl->glBindBuffer(GL_ARRAY_BUFFER, *(mesh->vertex_buffer + vertex_attributes_tangents));
-	    gl->glEnableVertexAttribArray(tangent_location);
-	    gl->glVertexAttribPointer(tangent_location, 3, GL_FLOAT, GL_FALSE, sizeof(vector3), 0);
+	    GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, *(mesh->vertex_buffer + vertex_attributes_tangents));
+	    GL_CALL(glEnableVertexAttribArray, tangent_location);
+	    GL_CALL(glVertexAttribPointer, tangent_location, 3, GL_FLOAT, GL_FALSE, sizeof(vector3), 0);
 	}
 
 	if(VA_ISSET(attribute_mask, VA_BINORMALS_BIT))
 	{
-	    gl->glBindBuffer(GL_ARRAY_BUFFER, *(mesh->vertex_buffer + vertex_attributes_normals));
-	    gl->glEnableVertexAttribArray(binormal_location);
-	    gl->glVertexAttribPointer(binormal_location, 3, GL_FLOAT, GL_FALSE, sizeof(vector3), 0);
+	    GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, *(mesh->vertex_buffer + vertex_attributes_normals));
+	    GL_CALL(glEnableVertexAttribArray, binormal_location);
+	    GL_CALL(glVertexAttribPointer, binormal_location, 3, GL_FLOAT, GL_FALSE, sizeof(vector3), 0);
 	}
     }
 
@@ -200,21 +200,20 @@ mesh_layout_for_shader(gl_functions* gl, loaded_mesh* mesh, shader_program* shad
 }
 
 static void
-renderer_bind_mesh_buffers(gl_functions* gl, loaded_mesh* mesh, shader_program* shader)
+renderer_bind_mesh_buffers(loaded_mesh* mesh, shader_program* shader)
 {
-    input_layout* layout = mesh_layout_for_shader(gl, mesh, shader);
+    input_layout* layout = mesh_layout_for_shader(mesh, shader);
     if(layout)
     {
-	gl->glBindVertexArray(layout->vertex_array);
+	GL_CALL(glBindVertexArray, layout->vertex_array);
     }
 }
 
 render_queue
-renderer_queue_create(gl_functions* gl, uint32 capacity, uint32 text_capacity)
+renderer_queue_create(uint32 capacity, uint32 text_capacity)
 {
     render_queue queue = (render_queue){0};
     
-    queue.gl = gl;
     queue.queue_used = 0;
     queue.queue_capacity = capacity;
 
@@ -235,11 +234,9 @@ renderer_queue_create(gl_functions* gl, uint32 capacity, uint32 text_capacity)
     memset(text_mesh_data.vertices.positions, 0, position_data_size);
     memset(text_mesh_data.vertices.texcoords, 0, texcoord_data_size);
 
-    queue.text_buffer             = load_mesh(gl, text_mesh_data, 1);
+    queue.text_buffer             = load_mesh(text_mesh_data, 1);
     queue.text_buffer_capacity    = text_mesh_data.vertex_count;
     queue.text_buffer_count       = 0;
-
-    renderer_check_error();
 
     return queue;
 }
@@ -466,14 +463,12 @@ configure_for_transparency(bool32 transparency_enabled)
 void
 renderer_queue_process(render_queue* queue)
 {
-    gl_functions* gl = queue->gl;
-    
     loaded_mesh* bound_mesh = 0;
     material* bound_material = 0;
 
     if(queue->text_buffer_count)
     {
-	update_mesh(queue->gl, &queue->text_buffer, 0, queue->text_buffer_count);
+	update_mesh(&queue->text_buffer, 0, queue->text_buffer_count);
     }
 
         uint32 queue_processed = 0;
@@ -502,11 +497,11 @@ renderer_queue_process(render_queue* queue)
 	    shader_program* shader = material->shader;
 	    if(material != bound_material)
 	    {
-		gl->glUseProgram(shader->program);
+		GL_CALL(glUseProgram, shader->program);
 	    
 		configure_for_transparency(shader->transparent);
 	 
-		renderer_apply_uniforms(gl, shader, &queue->uniforms);
+		renderer_apply_uniforms(shader, &queue->uniforms);
 
 		material_apply(material, &queue->uniforms_per_object);
 	    
@@ -517,14 +512,14 @@ renderer_queue_process(render_queue* queue)
 	    loaded_mesh* mesh = draw->mesh;
 	    if(mesh != bound_mesh || rebind_mesh)
 	    {
-		renderer_bind_mesh_buffers(gl, mesh, shader);
+		renderer_bind_mesh_buffers(mesh, shader);
 		bound_mesh = mesh;
 	    }
 
 	    shader_uniform_set_data(&queue->uniforms_per_object, hash_string("world"),
 				    draw->transform.data, sizeof(matrix4));
 
-	    renderer_apply_uniforms(gl, shader, &queue->uniforms_per_object);
+	    renderer_apply_uniforms(shader, &queue->uniforms_per_object);
 
 	    // TODO: Make the choice about drawing arrays or elements earlier in the pipeline,
 	    // remove the requirement for branching here.
@@ -543,8 +538,6 @@ renderer_queue_process(render_queue* queue)
 
 	queue_processed += (sizeof(render_queue_item) + item->command_size);
     }
-
-    renderer_check_error();
 }
 
 void
@@ -559,42 +552,6 @@ renderer_queue_set_view(render_queue* queue, matrix4 view)
 {
     shader_uniform_set_data(&queue->uniforms, hash_string("view"),
 			    view.data, sizeof(matrix4));
-}
-
-void
-renderer_check_error()
-{
-    GLenum error;
-    while((error = glGetError()) != GL_NO_ERROR)
-    {
-	char* error_name = "";
-	switch(error)
-	{
-	case GL_INVALID_ENUM:
-	    error_name = "GL_INVALID_ENUM";
-	    break;
-	case GL_INVALID_VALUE:
-	    error_name = "GL_INVALID_VALUE";
-	    break;
-	case GL_INVALID_OPERATION:
-	    error_name = "GL_INVALID_OPERATION";
-	    break;
-	case GL_INVALID_FRAMEBUFFER_OPERATION:
-	    error_name = "GL_INVALID_FRAMEBUFFER_OPERATION";
-	    break;
-	case GL_OUT_OF_MEMORY:
-	    error_name = "GL_OUT_OF_MEMORY";
-	    break;
-	case GL_STACK_UNDERFLOW:
-	    error_name = "GL_STACK_UNDERFLOW";
-	    break;
-	case GL_STACK_OVERFLOW:
-	    error_name = "GL_STACK_OVERFLOW";
-	    break;
-	}
-
-	platform_log("OpenGL Error: %s (%d)\n", error_name, error);
-    }
 }
 
 #undef glUniformScalar

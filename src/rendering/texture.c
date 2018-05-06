@@ -8,7 +8,7 @@
     texture.colors + (x + y * texture.width) * texture.components
 
 loaded_texture
-load_texture(gl_functions* gl, texture_data data)
+load_texture(texture_data data)
 {
     loaded_texture texture;
 
@@ -30,7 +30,7 @@ load_texture(gl_functions* gl, texture_data data)
 
     glTexImage2D(GL_TEXTURE_2D, 0, texture_format, data.width, data.height,
 		 0, texture_format, GL_UNSIGNED_BYTE, data.colors);
-    gl->glGenerateMipmap(GL_TEXTURE_2D);
+    GL_CALL(glGenerateMipmap, GL_TEXTURE_2D);
 
     glBindTexture(GL_TEXTURE_2D, 0);
 

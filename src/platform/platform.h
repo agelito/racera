@@ -2,20 +2,32 @@
 #define PLATFORM_H_INCLUDED
 
 #include <stdint.h>
-typedef int8_t int8;
+typedef int8_t  int8;
 typedef int16_t int16;
 typedef int32_t int32;
 typedef int64_t int64;
 
-typedef uint8_t uint8;
+typedef uint8_t  uint8;
 typedef uint16_t uint16;
 typedef uint32_t uint32;
 typedef uint64_t uint64;
 
+typedef uint8  bool8;
 typedef uint32 bool32;
 
-typedef float real32;
+typedef float  real32;
 typedef double real64;
+
+#define internal static
+
+#define assert(expr) if(!(expr)) { platform_log("assertion! %s:%d\n", __FILE__, __LINE__); *(int*)0 = 0; }
+
+#define array_count(array) (sizeof(array) / sizeof(array[0]))
+#define for_range(n, count) for(n = 0; n < count; ++n)
+
+#define KB(kilo_bytes) (kilo_bytes * 1024)
+#define MB(mega_bytes) (KB(mega_bytes) * 1024)
+#define GB(giga_bytes) (MB(giga_bytes) * 1024)
 
 typedef struct read_file read_file;
 

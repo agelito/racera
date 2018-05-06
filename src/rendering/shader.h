@@ -71,13 +71,13 @@ typedef struct
 } shader_uniform_group;
 
 shader_program
-load_shader(gl_functions* gl, char* vertex_path, char* fragment_path, bool32 transparent);
+load_shader(char* vertex_path, char* fragment_path, bool32 transparent);
 
 size_t
 shader_data_type_size(shader_data_type type, int count);
 
 shader_reflection
-shader_reflect(gl_functions* gl, shader_program* shader);
+shader_reflect(shader_program* shader);
 
 shader_uniform_group
 shader_uniform_group_create(size_t data_capacity);

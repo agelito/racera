@@ -1,11 +1,11 @@
 // racera_game.c
 
-#include "platform.h"
+#include "platform/platform.h"
+#include "platform/opengl.h"
 
 #include <stdlib.h>
 #include <math.h>
 
-#include "rendering/opengl.h"
 #include "racera.h"
 
 #include "math.c"
@@ -19,93 +19,70 @@
 static void
 game_initialize(game_state* state)
 {
-    state->gl = load_gl_functions();
-    gl_functions* gl = &state->gl;
+    opengl_initialize();
 
-    // gl->glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-    state->render_queue = renderer_queue_create(gl, KB(64), KB(16));
+    state->render_queue = renderer_queue_create(KB(64), KB(16));
 
     { // NOTE: Load shaders
 	platform_log("load shaders\n");
 	
 	char* vertex_shader = "shaders/simple.vert";
 	state->textured =
-	    load_shader(gl, vertex_shader, "shaders/textured.frag", 0);
+	    load_shader(vertex_shader, "shaders/textured.frag", 0);
 	state->colored =
-	    load_shader(gl, vertex_shader, "shaders/colored.frag", 1);
+	    load_shader(vertex_shader, "shaders/colored.frag", 1);
 	state->text =
-	    load_shader(gl, vertex_shader, "shaders/text.frag", 1);
+	    load_shader(vertex_shader, "shaders/text.frag", 1);
 	state->visualize_normals =
-	    load_shader(gl, vertex_shader, "shaders/normals_visualize.frag", 0);
+	    load_shader(vertex_shader, "shaders/normals_visualize.frag", 0);
 	state->visualize_colors =
-	    load_shader(gl, vertex_shader, "shaders/colors_visualize.frag", 0);
+	    load_shader(vertex_shader, "shaders/colors_visualize.frag", 0);
 	state->visualize_texcoords =
-	    load_shader(gl, vertex_shader, "shaders/texcoords_visualize.frag", 0);
-	renderer_check_error();
+	    load_shader(vertex_shader, "shaders/texcoords_visualize.frag", 0);
     }
 
     { // NOTE: Load Meshes
 	platform_log("load meshes\n");
 
-	texture_data heightmap_texture =
-	    texture_create_from_tga("heightmaps/heightmap.tga");
-	
-	state->heightmap = heightmap_load_from_texture(heightmap_texture, 1000, 1000, 200.0f);
-	texture_data_free(&heightmap_texture);
-
-	state->ground_resolution = 1000;
-	
-	state->ground = load_mesh(gl, mesh_create_from_heightmap(state->heightmap,
-								 0.0f, 0.0f, 4000.0f, 4000.0f,
-								 0, 0,
-								 state->heightmap.width,
-								 state->heightmap.height,
-								 state->ground_resolution,
-								 state->ground_resolution), 0);
-	mesh_data_free(&state->ground.data);
-    
-	state->cube = load_mesh(gl, mesh_create_cube(1.0f), 0);
+	state->cube = load_mesh(mesh_create_cube(1.0f), 0);
 	mesh_data_free(&state->cube.data);
 
-	state->cup = load_mesh(gl, obj_load_from_file("models/cup.obj"), 0);
+	state->cup = load_mesh(obj_load_from_file("models/cup.obj"), 0);
 	mesh_data_free(&state->cup.data);
 
-	state->quad = load_mesh(gl, mesh_create_quad(), 0);
+	state->quad = load_mesh(mesh_create_quad(), 0);
 	mesh_data_free(&state->quad.data);
-
-	renderer_check_error();
     }
 
     { // NOTE: Load Textures
-	state->checker = load_texture(gl, texture_create_checker(256, 256, 64));
+	platform_log("load textures\n");
+	
+	state->checker = load_texture(texture_create_checker(256, 256, 64));
 	texture_data_free(&state->checker.data);
-
-	state->ground_texture =
-	    load_texture(gl, texture_create_from_tga("heightmaps/heightmap.tga"));
-	texture_data_free(&state->ground_texture.data);
     }
 
     { // NOTE: Load Fonts
 	platform_log("load fonts\n");
 	
-	state->deja_vu = load_font(gl, font_create_from_file("fonts/DejaVu.fnt"));
-
-	renderer_check_error();
+	state->deja_vu = load_font(font_create_from_file("fonts/DejaVu.fnt"));
     }
 
     { // NOTE: Load Materials
 	platform_log("load materials\n");
 
-	state->ground_material = material_create(&state->textured, KB(1));
-	material_set_texture(&state->ground_material, "main_texture", &state->ground_texture);
-	material_set_color(&state->ground_material, "color", vector4_create(1.0f, 1.0f, 1.0f, 1.0f));
-	
 	state->cup_material = material_create(&state->visualize_normals, KB(1));
 
 	state->text_background = material_create(&state->colored, KB(1));
 	material_set_color(&state->text_background, "color",
 			   vector4_create(0.0f, 0.0f, 0.0f, 0.75f));
+    }
+
+    { // NOTE: Load terrain
+	platform_log("load terrain\n");
+	
+	texture_data heightmap_texture = texture_create_from_tga("heightmaps/heightmap.tga");
+	state->terrain = terrain_create(8192.0f, 8192.0f, heightmap_texture);
+	texture_data_free(&heightmap_texture);
     }
     
     state->camera_position = (vector3){{{-10.2f, 13.5f, -10.2f}}};
@@ -119,8 +96,8 @@ static void
 control_camera(game_state* state)
 {
     vector3 pitch_yaw_roll = state->camera_pitch_yaw_roll;
-    pitch_yaw_roll.y -= (float)state->mouse.relative_x * 0.5f;
-    pitch_yaw_roll.x -= (float)state->mouse.relative_y * 0.5f;
+    pitch_yaw_roll.y -= (float)state->mouse.relative_x * 30.0f * state->time_frame;
+    pitch_yaw_roll.x -= (float)state->mouse.relative_y * 30.0f * state->time_frame;
     if(pitch_yaw_roll.x < -90.0f) pitch_yaw_roll.x = -90.0f;
     if(pitch_yaw_roll.x > 90.0f) pitch_yaw_roll.x = 90.0f;
     state->camera_pitch_yaw_roll = pitch_yaw_roll;
@@ -128,22 +105,22 @@ control_camera(game_state* state)
     vector3 camera_movement = (vector3){0};
     if(keyboard_is_down(&state->keyboard, VKEY_W))
     {
-	camera_movement.z += 1.0f;
+	camera_movement.z += 10.0f * state->time_frame;
     }
 
     if(keyboard_is_down(&state->keyboard, VKEY_S))
     {
-	camera_movement.z -= 1.0f;
+	camera_movement.z -= 10.0f * state->time_frame;
     }
 
     if(keyboard_is_down(&state->keyboard, VKEY_A))
     {
-	camera_movement.x -= 1.0f;
+	camera_movement.x -= 10.0f * state->time_frame;
     }
 
     if(keyboard_is_down(&state->keyboard, VKEY_D))
     {
-	camera_movement.x += 1.0f;
+	camera_movement.x += 10.0f * state->time_frame;
     }
 
     matrix4 camera_rotation = matrix_rotation_pitch_yaw(pitch_yaw_roll.x, pitch_yaw_roll.y);
@@ -180,46 +157,11 @@ game_update_and_render(game_state* state)
 	state->created_cube_count -= 1;
     }
 
-    if(keyboard_is_pressed(&state->keyboard, VKEY_G))
-    {
-	state->ground_resolution *= 2;
-
-
-	state->ground = load_mesh(&state->gl, mesh_create_from_heightmap(state->heightmap,
-									 0.0f, 0.0f, 4000.0f, 4000.0f,
-									 0, 0,
-									 state->heightmap.width,
-									 state->heightmap.height,
-									 state->ground_resolution,
-									 state->ground_resolution), 0);
-	mesh_data_free(&state->ground.data);
-    }
-
-    if(keyboard_is_pressed(&state->keyboard, VKEY_H))
-    {
-	state->ground_resolution /= 2;
-	if(state->ground_resolution < 2)
-	{
-	    state->ground_resolution = 2;
-	}
-
-	state->ground = load_mesh(&state->gl, mesh_create_from_heightmap(state->heightmap,
-									 0.0f, 0.0f, 4000.0f, 4000.0f,
-									 0, 0,
-									 state->heightmap.width,
-									 state->heightmap.height,
-									 state->ground_resolution,
-									 state->ground_resolution), 0);
-
-	mesh_data_free(&state->ground.data);
-    }
-
     renderer_queue_push_clear(&state->render_queue, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT,
 			      (float[4]){0.1f, 0.1f, 0.1f, 1.0f});
 
     { // NOTE: Draw scene
-	renderer_queue_push_draw(&state->render_queue, &state->ground,
-				 &state->ground_material, matrix_identity());
+	terrain_render(&state->render_queue, &state->terrain);
 	
 	int i;
 	for(i = 0; i < state->created_cube_count; i++)
@@ -261,11 +203,6 @@ game_update_and_render(game_state* state)
 
 
 	text_position.y -= 52.0f;
-	
-	char resolution_text[256];
-	platform_format(resolution_text, 256, "ground resolution: %d", state->ground_resolution);
-	ui_draw_label(state, text_position, resolution_text, 26.0f, 10.0f, &state->deja_vu);
-
 
 	matrix4 projection = matrix_orthographic((float)state->screen_width,
 						 (float)state->screen_height, 1.0f, 100.0f);

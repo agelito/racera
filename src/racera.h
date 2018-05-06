@@ -1,18 +1,11 @@
 #ifndef RACERA_H_INCLUDED
 #define RACERA_H_INCLUDED
 
-#define assert(expr) if(!(expr)) { platform_log("assertion! %s:%d\n", __FILE__, __LINE__); *(int*)0 = 0; }
-
-#define array_count(array) (sizeof(array) / sizeof(array[0]))
-#define for_range(n, count) for(n = 0; n < count; ++n)
-
-#define KB(kilo_bytes) (kilo_bytes * 1024)
-#define MB(mega_bytes) (KB(mega_bytes) * 1024)
-#define GB(giga_bytes) (MB(giga_bytes) * 1024)
-
 #include "math.h"
 #include "font.h"
 #include "rendering/renderer.h"
+
+#include "terrain.h"
 
 #include "input/mouse.h"
 #include "input/keyboard.h"
@@ -35,8 +28,6 @@ struct game_state
     int screen_height;
     
     int initialized;
-    
-    gl_functions gl;
 
     shader_program textured;
     shader_program colored;
@@ -47,19 +38,18 @@ struct game_state
 
     render_queue render_queue;
 
-    loaded_mesh ground;
     loaded_mesh cube;
     loaded_mesh quad;
     loaded_mesh cup;
 
     loaded_texture checker;
-    loaded_texture ground_texture;
 
     loaded_font deja_vu;
 
-    material ground_material;
     material cup_material;
     material text_background;
+
+    terrain terrain;
 
     vector3 camera_position;
     vector3 camera_pitch_yaw_roll;
@@ -67,10 +57,6 @@ struct game_state
     
     int created_cube_count;
     vector3 created_cube_positions[MAX_CUBES];
-
-    int ground_resolution;
-
-    heightmap heightmap;
 };
 
 void

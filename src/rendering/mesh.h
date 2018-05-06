@@ -78,21 +78,40 @@ struct loaded_mesh
     mesh_data data;
 };
 
-loaded_mesh load_mesh(gl_functions* gl, mesh_data data, bool32 dynamic);
-void update_mesh(gl_functions* gl, loaded_mesh* mesh, uint32 offset, uint32 count);
+loaded_mesh
+load_mesh(mesh_data data, bool32 dynamic);
 
-mesh_data mesh_create_quad();
-mesh_data mesh_create_triangle(float side);
-mesh_data mesh_create_circle(float radius, int subdivisions);
-mesh_data mesh_create_cube(float side);
-mesh_data mesh_create_plane_xz(float side, int subdivisions);
-mesh_data mesh_create_from_heightmap(heightmap heightmap,
-				     float world_x, float world_y, float world_width, float world_height,
-				     int heightmap_x, int heightmap_y, int heightmap_w,  int heightmap_h,
-				     int resolution_w, int resolution_h);
-void mesh_data_free(mesh_data* data);
+void
+update_mesh(loaded_mesh* mesh, uint32 offset, uint32 count);
 
-void mesh_generate_tangents(mesh_data* data);
-void mesh_generate_normals(mesh_data* data, bool32 from_center);
+mesh_data
+mesh_create_quad();
+
+mesh_data
+mesh_create_triangle(float side);
+
+mesh_data
+mesh_create_circle(float radius, int subdivisions);
+
+mesh_data
+mesh_create_cube(float side);
+
+mesh_data
+mesh_create_plane_xz(float side, int subdivisions);
+
+mesh_data
+mesh_create_from_heightmap(heightmap heightmap, float world_width, float world_height,
+			   int heightmap_x, int heightmap_y,
+			   int heightmap_w,  int heightmap_h,
+			   int resolution_w, int resolution_h);
+
+void
+mesh_data_free(mesh_data* data);
+
+void
+mesh_generate_tangents(mesh_data* data);
+
+void
+mesh_generate_normals(mesh_data* data, bool32 from_center);
 
 #endif // MESH_H_INCLUDED

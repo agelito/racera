@@ -23,7 +23,7 @@
 #define array_count(array) (sizeof(array) / sizeof(array[0]))
 #define invalid_code *(int*)0 = 0
 
-#include "../../platform.h"
+#include "../platform.h"
 
 #include "linux_platform.c"
 #include "linux_cpu.c"
@@ -31,6 +31,7 @@
 #include "linux_mouse_raw.c"
 #include "linux_keyboard.c"
 #include "linux_window.c"
+#include "linux_opengl.c"
 
 #include "../../racera.h"
 
@@ -62,10 +63,6 @@ int main(int argc, char* argv[])
 
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
-    
-    
-
-    renderer_check_error();
 
     game_state racera_state = (game_state){0};
 

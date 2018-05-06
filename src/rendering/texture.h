@@ -1,9 +1,9 @@
 #ifndef TEXTURE_H_INCLUDED
 #define TEXTURE_H_INCLUDED
 
-#include "../math.h"
+#include "../platform/opengl.h"
 
-#include "opengl.h"
+#include "../math.h"
 
 typedef struct
 {
@@ -19,7 +19,7 @@ typedef struct
     texture_data data;
 } loaded_texture;
 
-loaded_texture load_texture(gl_functions* gl, texture_data data);
+loaded_texture load_texture(texture_data data);
 
 texture_data texture_create_checker(int width, int height, int checker_size);
 texture_data texture_create_from_tga(char* path);

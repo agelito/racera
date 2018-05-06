@@ -14,36 +14,36 @@ struct uniform_data_location
 };
 
 static void
-print_shader_error(gl_functions* gl, GLuint shader)
+print_shader_error(GLuint shader)
 {
     GLchar info_log[1024];
-    gl->glGetShaderInfoLog(shader, 1024, NULL, info_log);
+    GL_CALL(glGetShaderInfoLog, shader, 1024, NULL, info_log);
     platform_log("%s\n\n", info_log);
 }
 
 static void
-print_program_error(gl_functions* gl, GLuint program)
+print_program_error(GLuint program)
 {
     char info_log[1024];
-    gl->glGetProgramInfoLog(program, 1024, NULL, (GLchar*)info_log);
+    GL_CALL(glGetProgramInfoLog, program, 1024, NULL, (GLchar*)info_log);
     platform_log("%s\n\n", info_log);
 }
 
 shader_program
-load_shader(gl_functions* gl, char* vertex_path, char* fragment_path, bool32 transparent)
+load_shader(char* vertex_path, char* fragment_path, bool32 transparent)
 {
-    shader_program shader;
+    shader_program shader = (shader_program){0};
 
     shader.transparent = transparent;
     
     read_file vertex_source = platform_read_file(vertex_path, 1);
     read_file fragment_source = platform_read_file(fragment_path, 1);
 
-    shader.vertex = gl->glCreateShader(GL_VERTEX_SHADER);
-    shader.fragment = gl->glCreateShader(GL_FRAGMENT_SHADER);
+    shader.vertex = GL_CALL(glCreateShader, GL_VERTEX_SHADER);
+    shader.fragment = GL_CALL(glCreateShader, GL_FRAGMENT_SHADER);
 
-    gl->glShaderSource(shader.vertex, 1, (const GLchar**)&vertex_source.data, 0);
-    gl->glShaderSource(shader.fragment, 1, (const GLchar**)&fragment_source.data, 0);
+    GL_CALL(glShaderSource, shader.vertex, 1, (const GLchar**)&vertex_source.data, 0);
+    GL_CALL(glShaderSource, shader.fragment, 1, (const GLchar**)&fragment_source.data, 0);
 
     char* source_array[] = { (char*)vertex_source.data, (char*)fragment_source.data };
     shader.source_hash = hash_string_array(source_array, 2);
@@ -53,36 +53,36 @@ load_shader(gl_functions* gl, char* vertex_path, char* fragment_path, bool32 tra
 
     int successful_compile = 0;
     
-    gl->glCompileShader(shader.vertex);
-    gl->glGetShaderiv(shader.vertex, GL_COMPILE_STATUS, &successful_compile);
+    GL_CALL(glCompileShader, shader.vertex);
+    GL_CALL(glGetShaderiv, shader.vertex, GL_COMPILE_STATUS, &successful_compile);
     if(!successful_compile)
     {
         platform_log("failed to compile vertex shader:\n");
-        print_shader_error(gl, shader.vertex);
+        print_shader_error(shader.vertex);
     }
 
-    gl->glCompileShader(shader.fragment);
-    gl->glGetShaderiv(shader.fragment, GL_COMPILE_STATUS, &successful_compile);
+    GL_CALL(glCompileShader, shader.fragment);
+    GL_CALL(glGetShaderiv, shader.fragment, GL_COMPILE_STATUS, &successful_compile);
     if(!successful_compile)
     {
         platform_log("failed to compile fragment shader:\n");
-        print_shader_error(gl, shader.fragment);
+        print_shader_error(shader.fragment);
     }
 
-    shader.program = gl->glCreateProgram();
-    gl->glAttachShader(shader.program, shader.vertex);
-    gl->glAttachShader(shader.program, shader.fragment);
-    gl->glLinkProgram(shader.program);
+    shader.program = GL_CALL(glCreateProgram);
+    GL_CALL(glAttachShader, shader.program, shader.vertex);
+    GL_CALL(glAttachShader, shader.program, shader.fragment);
+    GL_CALL(glLinkProgram, shader.program);
 
     int successful_link = 0;
-    gl->glGetProgramiv(shader.program, GL_LINK_STATUS, &successful_link);
+    GL_CALL(glGetProgramiv, shader.program, GL_LINK_STATUS, &successful_link);
     if(!successful_link)
     {
         platform_log("failed to link shader program:\n");
-        print_program_error(gl, shader.program);
+        print_program_error(shader.program);
     }
 
-    shader.info = shader_reflect(gl, &shader);
+    shader.info = shader_reflect(&shader);
 
     return shader;
 }
@@ -134,13 +134,13 @@ shader_data_type_size(shader_data_type type, int count)
 }
 
 shader_reflection
-shader_reflect(gl_functions* gl, shader_program* shader)
+shader_reflect(shader_program* shader)
 {
     int uniform_count;
-    gl->glGetProgramiv(shader->program, GL_ACTIVE_UNIFORMS, &uniform_count);
+    GL_CALL(glGetProgramiv, shader->program, GL_ACTIVE_UNIFORMS, &uniform_count);
     
     int max_name_length;
-    gl->glGetProgramiv(shader->program, GL_ACTIVE_UNIFORM_MAX_LENGTH, &max_name_length);
+    GL_CALL(glGetProgramiv, shader->program, GL_ACTIVE_UNIFORM_MAX_LENGTH, &max_name_length);
 
     char* uniform_name = (char*)malloc(max_name_length + 1);
     
@@ -156,7 +156,7 @@ shader_reflect(gl_functions* gl, shader_program* shader)
         int uniform_count;
         GLenum type;
 
-        gl->glGetActiveUniform(shader->program, uniform_index, max_name_length,
+        GL_CALL(glGetActiveUniform, shader->program, uniform_index, max_name_length,
                                &name_length, &uniform_count, &type, uniform_name);
         *(uniform_name + name_length) = 0;
 

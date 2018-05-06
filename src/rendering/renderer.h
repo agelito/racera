@@ -1,18 +1,20 @@
 #ifndef RENDERER_H_INCLUDED
 #define RENDERER_H_INCLUDED
 
-#include "opengl.h"
+#include "../platform/opengl.h"
+
 #include "shader.h"
 #include "texture.h"
 #include "mesh.h"
 #include "material.h"
 
+// TODO: Font shouldn't need to be dependency in renderer.h
+#include "../font.h"
+
 typedef struct render_queue render_queue;
 
 struct render_queue
 {
-    gl_functions* gl;
-
     uint32 queue_used;
     uint32 queue_capacity;
     uint8* queue_items;
@@ -26,10 +28,10 @@ struct render_queue
 };
 
 void
-renderer_apply_uniforms(gl_functions* gl, shader_program* shader, shader_uniform_group* group);
+renderer_apply_uniforms(shader_program* shader, shader_uniform_group* group);
 
 render_queue
-renderer_queue_create(gl_functions* gl, uint32 capacity, uint32 text_capacity);
+renderer_queue_create(uint32 capacity, uint32 text_capacity);
 
 void
 renderer_queue_push_clear(render_queue* queue, uint32 clear_flags, float clear_color[4]);

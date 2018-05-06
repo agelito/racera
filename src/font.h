@@ -1,7 +1,7 @@
 #ifndef FONT_H_INCLUDED
 #define FONT_H_INCLUDED
 
-#include "rendering/opengl.h"
+#include "platform/opengl.h"
 #include "rendering/texture.h"
 #include "rendering/material.h"
 
@@ -61,7 +61,7 @@ struct loaded_font
 };
 
 loaded_font
-load_font(gl_functions* gl, font_data data);
+load_font(font_data data);
 
 font_data
 font_create_from_file(char* path);

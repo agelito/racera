@@ -1,6 +1,7 @@
 // mesh.c
 
-#include "opengl.h"
+#include "../platform/opengl.h"
+
 #include "mesh.h"
 
 // TODO: Use platform for memory allocation instead of stdlib.
@@ -15,7 +16,7 @@
     (((int)(z * 1000.0f) & 0x3ff) << 20)
 
 loaded_mesh
-load_mesh(gl_functions* gl, mesh_data data, bool32 dynamic)
+load_mesh(mesh_data data, bool32 dynamic)
 {
     loaded_mesh mesh = (loaded_mesh){0};
     mesh.data = data;
@@ -33,23 +34,23 @@ load_mesh(gl_functions* gl, mesh_data data, bool32 dynamic)
     if(data.triangles)
     {
 	uint32* index_buffer = &mesh.index_buffer;
-	gl->glGenBuffers(1, index_buffer);
-	gl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *index_buffer);
+	GL_CALL(glGenBuffers, 1, index_buffer);
+	GL_CALL(glBindBuffer, GL_ELEMENT_ARRAY_BUFFER, *index_buffer);
 
 	size_t index_buffer_size = (sizeof(uint32) * data.index_count);
-	gl->glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer_size, data.triangles, usage);
+	GL_CALL(glBufferData, GL_ELEMENT_ARRAY_BUFFER, index_buffer_size, data.triangles, usage);
 
-	gl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	GL_CALL(glBindBuffer, GL_ELEMENT_ARRAY_BUFFER, 0);
     }
     
     if(data.vertices.positions)
     {
 	vertex_buffer = (mesh.vertex_buffer + vertex_attributes_positions);
-	gl->glGenBuffers(1, vertex_buffer);
-	gl->glBindBuffer(GL_ARRAY_BUFFER, *vertex_buffer);
+	GL_CALL(glGenBuffers, 1, vertex_buffer);
+	GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, *vertex_buffer);
 	
 	vertex_buffer_size = (sizeof(vector3) * data.vertex_count);
-	gl->glBufferData(GL_ARRAY_BUFFER, vertex_buffer_size,
+	GL_CALL(glBufferData, GL_ARRAY_BUFFER, vertex_buffer_size,
 		      data.vertices.positions, usage);
 
 	VA_INCLUDE(mesh.attribute_mask, VA_POSITIONS_BIT);
@@ -58,11 +59,11 @@ load_mesh(gl_functions* gl, mesh_data data, bool32 dynamic)
     if(data.vertices.normals)
     {
 	vertex_buffer = (mesh.vertex_buffer + vertex_attributes_normals);
-	gl->glGenBuffers(1, vertex_buffer);
-	gl->glBindBuffer(GL_ARRAY_BUFFER, *vertex_buffer);
+	GL_CALL(glGenBuffers, 1, vertex_buffer);
+	GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, *vertex_buffer);
 
 	vertex_buffer_size = (sizeof(vector3) * data.vertex_count);
-	gl->glBufferData(GL_ARRAY_BUFFER, vertex_buffer_size,
+	GL_CALL(glBufferData, GL_ARRAY_BUFFER, vertex_buffer_size,
 			  data.vertices.normals, usage);
 
 	VA_INCLUDE(mesh.attribute_mask, VA_NORMALS_BIT);
@@ -71,11 +72,11 @@ load_mesh(gl_functions* gl, mesh_data data, bool32 dynamic)
     if(data.vertices.texcoords)
     {
 	vertex_buffer = (mesh.vertex_buffer + vertex_attributes_texcoords);
-	gl->glGenBuffers(1, vertex_buffer);
-	gl->glBindBuffer(GL_ARRAY_BUFFER, *vertex_buffer);
+	GL_CALL(glGenBuffers, 1, vertex_buffer);
+	GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, *vertex_buffer);
 
 	vertex_buffer_size = (sizeof(vector2) * data.vertex_count);
-	gl->glBufferData(GL_ARRAY_BUFFER, vertex_buffer_size,
+	GL_CALL(glBufferData, GL_ARRAY_BUFFER, vertex_buffer_size,
 			  data.vertices.texcoords, usage);
 	
 	VA_INCLUDE(mesh.attribute_mask, VA_TEXCOORDS_BIT);
@@ -84,11 +85,11 @@ load_mesh(gl_functions* gl, mesh_data data, bool32 dynamic)
     if(data.vertices.colors)
     {
 	vertex_buffer = (mesh.vertex_buffer + vertex_attributes_colors);
-	gl->glGenBuffers(1, vertex_buffer);
-	gl->glBindBuffer(GL_ARRAY_BUFFER, *vertex_buffer);
+	GL_CALL(glGenBuffers, 1, vertex_buffer);
+	GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, *vertex_buffer);
 
 	vertex_buffer_size = (sizeof(color) * data.vertex_count);
-	gl->glBufferData(GL_ARRAY_BUFFER, vertex_buffer_size,
+	GL_CALL(glBufferData, GL_ARRAY_BUFFER, vertex_buffer_size,
 			  data.vertices.colors, usage);
 
 	VA_INCLUDE(mesh.attribute_mask, VA_COLORS_BIT);
@@ -97,11 +98,11 @@ load_mesh(gl_functions* gl, mesh_data data, bool32 dynamic)
     if(data.vertices.tangents)
     {
 	vertex_buffer = (mesh.vertex_buffer + vertex_attributes_tangents);
-	gl->glGenBuffers(1, vertex_buffer);
-	gl->glBindBuffer(GL_ARRAY_BUFFER, *vertex_buffer);
+	GL_CALL(glGenBuffers, 1, vertex_buffer);
+	GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, *vertex_buffer);
 
 	vertex_buffer_size = (sizeof(vector3) * data.vertex_count);
-	gl->glBufferData(GL_ARRAY_BUFFER, vertex_buffer_size,
+	GL_CALL(glBufferData, GL_ARRAY_BUFFER, vertex_buffer_size,
 			 data.vertices.tangents, usage);
 
 	VA_INCLUDE(mesh.attribute_mask, VA_TANGENTS_BIT);
@@ -110,23 +111,23 @@ load_mesh(gl_functions* gl, mesh_data data, bool32 dynamic)
     if(data.vertices.binormals)
     {
 	vertex_buffer = (mesh.vertex_buffer + vertex_attributes_binormals);
-	gl->glGenBuffers(1, vertex_buffer);
-	gl->glBindBuffer(GL_ARRAY_BUFFER, *vertex_buffer);
+	GL_CALL(glGenBuffers, 1, vertex_buffer);
+	GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, *vertex_buffer);
 
 	vertex_buffer_size = (sizeof(vector3) * data.vertex_count);
-	gl->glBufferData(GL_ARRAY_BUFFER, vertex_buffer_size,
+	GL_CALL(glBufferData, GL_ARRAY_BUFFER, vertex_buffer_size,
 			 data.vertices.binormals, usage);
 
 	VA_INCLUDE(mesh.attribute_mask, VA_BINORMALS_BIT);
     }
 
-    gl->glBindBuffer(GL_ARRAY_BUFFER, 0);
+    GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, 0);
 
     return mesh;
 }
 
 void
-update_mesh(gl_functions* gl, loaded_mesh* mesh, uint32 offset, uint32 count)
+update_mesh(loaded_mesh* mesh, uint32 offset, uint32 count)
 {
     GLuint* vertex_buffer = 0;
     size_t vertex_buffer_offset = 0;;
@@ -134,81 +135,81 @@ update_mesh(gl_functions* gl, loaded_mesh* mesh, uint32 offset, uint32 count)
 
     if(mesh->index_buffer && mesh->data.triangles)
     {
-	gl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->index_buffer);
+	GL_CALL(glBindBuffer, GL_ELEMENT_ARRAY_BUFFER, mesh->index_buffer);
 
 	size_t index_buffer_offset = (offset * sizeof(uint32));
 	size_t index_buffer_size = (count * sizeof(uint32));
-	gl->glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, index_buffer_offset, index_buffer_size,
+	GL_CALL(glBufferSubData, GL_ELEMENT_ARRAY_BUFFER, index_buffer_offset, index_buffer_size,
 			    mesh->data.triangles);
     }
     
     if(VA_ISSET(mesh->attribute_mask, VA_POSITIONS_BIT))
     {
 	vertex_buffer = (mesh->vertex_buffer + vertex_attributes_positions);
-	gl->glBindBuffer(GL_ARRAY_BUFFER, *vertex_buffer);
+	GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, *vertex_buffer);
 
 	vertex_buffer_offset = (offset * sizeof(vector3));
 	vertex_buffer_size = (count * sizeof(vector3));
-	gl->glBufferSubData(GL_ARRAY_BUFFER, vertex_buffer_offset, vertex_buffer_size,
+	GL_CALL(glBufferSubData, GL_ARRAY_BUFFER, vertex_buffer_offset, vertex_buffer_size,
 			    mesh->data.vertices.positions);
     }
 
     if(VA_ISSET(mesh->attribute_mask, VA_NORMALS_BIT))
     {
 	vertex_buffer = (mesh->vertex_buffer + vertex_attributes_normals);
-	gl->glBindBuffer(GL_ARRAY_BUFFER, *vertex_buffer);
+	GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, *vertex_buffer);
 
 	vertex_buffer_offset = (offset * sizeof(vector3));
 	vertex_buffer_size = (count * sizeof(vector3));
-	gl->glBufferSubData(GL_ARRAY_BUFFER, vertex_buffer_offset, vertex_buffer_size,
+	GL_CALL(glBufferSubData, GL_ARRAY_BUFFER, vertex_buffer_offset, vertex_buffer_size,
 			    mesh->data.vertices.normals);
     }
 
     if(VA_ISSET(mesh->attribute_mask, VA_TEXCOORDS_BIT))
     {
 	vertex_buffer = (mesh->vertex_buffer + vertex_attributes_texcoords);
-	gl->glBindBuffer(GL_ARRAY_BUFFER, *vertex_buffer);
+	GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, *vertex_buffer);
 
 	vertex_buffer_offset = (offset * sizeof(vector2));
 	vertex_buffer_size = (count * sizeof(vector2));
-	gl->glBufferSubData(GL_ARRAY_BUFFER, vertex_buffer_offset, vertex_buffer_size,
+	GL_CALL(glBufferSubData, GL_ARRAY_BUFFER, vertex_buffer_offset, vertex_buffer_size,
 			    mesh->data.vertices.texcoords);
     }
 
     if(VA_ISSET(mesh->attribute_mask, VA_COLORS_BIT))
     {
 	vertex_buffer = (mesh->vertex_buffer + vertex_attributes_colors);
-	gl->glBindBuffer(GL_ARRAY_BUFFER, *vertex_buffer);
+	GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, *vertex_buffer);
 
 	vertex_buffer_offset = (offset * sizeof(vector3));
 	vertex_buffer_size = (count * sizeof(vector3));
-	gl->glBufferSubData(GL_ARRAY_BUFFER, vertex_buffer_offset, vertex_buffer_size,
+	GL_CALL(glBufferSubData, GL_ARRAY_BUFFER, vertex_buffer_offset, vertex_buffer_size,
 			    mesh->data.vertices.colors);
     }
 
     if(VA_ISSET(mesh->attribute_mask, VA_TANGENTS_BIT))
     {
 	vertex_buffer = (mesh->vertex_buffer + vertex_attributes_tangents);
-	gl->glBindBuffer(GL_ARRAY_BUFFER, *vertex_buffer);
+	GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, *vertex_buffer);
 
 	vertex_buffer_offset = (offset * sizeof(vector3));
 	vertex_buffer_size = (count * sizeof(vector3));
-	gl->glBufferSubData(GL_ARRAY_BUFFER, vertex_buffer_offset, vertex_buffer_size,
+	GL_CALL(glBufferSubData, GL_ARRAY_BUFFER, vertex_buffer_offset, vertex_buffer_size,
 			    mesh->data.vertices.tangents);
     }
 
     if(VA_ISSET(mesh->attribute_mask, VA_BINORMALS_BIT))
     {
 	vertex_buffer = (mesh->vertex_buffer + vertex_attributes_binormals);
-	gl->glBindBuffer(GL_ARRAY_BUFFER, *vertex_buffer);
+	GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, *vertex_buffer);
 
 	vertex_buffer_offset = (offset * sizeof(vector3));
 	vertex_buffer_size = (count * sizeof(vector3));
-	gl->glBufferSubData(GL_ARRAY_BUFFER, vertex_buffer_offset, vertex_buffer_size,
+	GL_CALL(glBufferSubData, GL_ARRAY_BUFFER, vertex_buffer_offset, vertex_buffer_size,
 			    mesh->data.vertices.binormals);
     }
 
-    gl->glBindBuffer(GL_ARRAY_BUFFER, 0);
+    GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, 0);
 }
 
 mesh_data
@@ -590,8 +591,7 @@ mesh_create_plane_xz(float side, int subdivisions)
 }
 
 mesh_data
-mesh_create_from_heightmap(heightmap heightmap,
-			   float world_x, float world_y, float world_width, float world_height,
+mesh_create_from_heightmap(heightmap heightmap, float world_width, float world_height,
 			   int heightmap_x, int heightmap_y, int heightmap_w,  int heightmap_h,
 			   int resolution_w, int resolution_h)
 {
@@ -636,9 +636,6 @@ mesh_create_from_heightmap(heightmap heightmap,
 	    
 	    float height_y = heightmap_sample(&heightmap, u_h, v_h);
 	    vector3 position = vector3_create(u * world_width, height_y, v * world_height);
-
-	    position.x += world_x;
-	    position.z += world_y;
 
 	    int vertex = x + y * resolution_w;
 	    positions[vertex] = vector3_subtract(position, center_offset);

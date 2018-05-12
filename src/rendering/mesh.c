@@ -593,7 +593,7 @@ mesh_create_plane_xz(float side, int subdivisions)
 mesh_data
 mesh_create_from_heightmap(heightmap heightmap, float world_width, float world_height,
 			   int heightmap_x, int heightmap_y, int heightmap_w,  int heightmap_h,
-			   int resolution_w, int resolution_h)
+			   int resolution_w, int resolution_h, float height_scale)
 {
     int width_minus_one  = resolution_w - 1;
     int height_minus_one = resolution_h - 1;
@@ -635,7 +635,8 @@ mesh_create_from_heightmap(heightmap heightmap, float world_width, float world_h
 	    float u_h = heightmap_sample_x * one_over_heightmap_w;
 	    
 	    float height_y = heightmap_sample(&heightmap, u_h, v_h);
-	    vector3 position = vector3_create(u * world_width, height_y, v * world_height);
+	    vector3 position =
+		vector3_create(u * world_width, height_y * height_scale, v * world_height);
 
 	    int vertex = x + y * resolution_w;
 	    positions[vertex] = vector3_subtract(position, center_offset);

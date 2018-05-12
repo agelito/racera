@@ -1,6 +1,6 @@
 #!/bin/sh
 
-CFLAGS="-std=c99 -Wall -Wextra -g -DOPENGL_DEBUG"
+CFLAGS="-std=c99 -Wall -Wextra -g"
 LDLIBS="-lGL -lm -lX11 -lXi"
 
 SRC_FILES="src/platform/linux/linux_main.c src/racera_game.c src/rendering/heightmap.c src/terrain.c"

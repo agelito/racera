@@ -159,6 +159,17 @@ texture_unpack_rgba(uint8* color)
     return result;
 }
 
+uint8*
+texture_pack_rgba(uint8* pixel, vector4 rgba)
+{
+    pixel[0] = (uint8)(rgba.x * 255.0f);
+    pixel[1] = (uint8)(rgba.y * 255.0f);
+    pixel[2] = (uint8)(rgba.z * 255.0f);
+    pixel[3] = (uint8)(rgba.w * 255.0f);
+
+    return (pixel + 4);
+}
+
 vector4
 texture_bilinear_sample(float tx, float ty, texture_data texture)
 {

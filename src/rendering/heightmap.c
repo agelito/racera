@@ -6,7 +6,7 @@
 #include <stdlib.h>
 
 heightmap
-heightmap_load_from_texture(texture_data texture, int width, int height, float height_scale)
+heightmap_load_from_texture(texture_data texture, int width, int height)
 {
     heightmap result = (heightmap){0};
 
@@ -28,7 +28,7 @@ heightmap_load_from_texture(texture_data texture, int width, int height, float h
 	    u = (float)x / width;
 	    
 	    vector4 color = texture_bilinear_sample(u, v, texture);
-	    float height = color.x * height_scale;
+	    float height = color.x;
 
 	    *height_data++ = height;
 	}
@@ -90,4 +90,18 @@ float heightmap_sample(heightmap* heightmap, float x, float y)
     float heightb = ((heightx0y1 * one_minus_fx) + (heightx1y1 * fraction_x));
 
     return ((heighta * one_minus_fy) + (heightb * fraction_y));
+}
+
+float
+heightmap_sample_rect(heightmap* heightmap, float u, float v,
+		      int heightmap_x, int heightmap_y,
+		      int heightmap_w,  int heightmap_h)
+{
+    float heightmap_sample_x =(float)heightmap_x + heightmap_w * u;
+    float sample_u = heightmap_sample_x / heightmap->width;
+
+    float heightmap_sample_y = (float)heightmap_y + heightmap_h * v;
+    float sample_v = heightmap_sample_y / heightmap->height;
+
+    return heightmap_sample(heightmap, sample_u, sample_v);
 }

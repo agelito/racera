@@ -103,7 +103,8 @@ mesh_data
 mesh_create_from_heightmap(heightmap heightmap, float world_width, float world_height,
 			   int heightmap_x, int heightmap_y,
 			   int heightmap_w,  int heightmap_h,
-			   int resolution_w, int resolution_h);
+			   int resolution_w, int resolution_h,
+			   float height_scale);
 
 void
 mesh_data_free(mesh_data* data);

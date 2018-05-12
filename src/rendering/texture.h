@@ -28,6 +28,8 @@ vector4 texture_unpack_bw(uint8* color);
 vector4 texture_unpack_rgb(uint8* color);
 vector4 texture_unpack_rgba(uint8* color);
 
+uint8* texture_pack_rgba(uint8* pixel, vector4 rgba);
+
 vector4 texture_bilinear_sample(float tx, float ty, texture_data texture);
 
 void texture_data_free(texture_data* data);

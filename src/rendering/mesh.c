@@ -614,27 +614,19 @@ mesh_create_from_heightmap(heightmap heightmap, float world_width, float world_h
     uint32* triangles = (uint32*)malloc(triangles_data_size);
     data.triangles = triangles;
 
-    vector3 center_offset = vector3_create(world_width * 0.5f, 0.0f, world_height * 0.5f);
-
-    float one_over_heightmap_w = 1.0f / heightmap.width;
-    float one_over_heightmap_h = 1.0f / heightmap.height;
+    vector3 center_offset = vector3_create(0.0f, 0.0f, 0.0f);
 
     int x, y;
     for(y = 0; y < resolution_h; ++y)
     {
 	float v = (float)y / height_minus_one;
 
-	float heightmap_sample_y = (float)heightmap_y + heightmap_h * v;
-	float v_h = heightmap_sample_y * one_over_heightmap_h;
-
 	for(x = 0; x < resolution_w; ++x)
 	{
 	    float u = (float)x / width_minus_one;
 
-	    float heightmap_sample_x =(float)heightmap_x + heightmap_w * u;
-	    float u_h = heightmap_sample_x * one_over_heightmap_w;
-	    
-	    float height_y = heightmap_sample(&heightmap, u_h, v_h);
+	    float height_y = heightmap_sample_rect(&heightmap, u, v, heightmap_x, heightmap_y,
+						   heightmap_w, heightmap_h);
 	    vector3 position =
 		vector3_create(u * world_width, height_y * height_scale, v * world_height);
 

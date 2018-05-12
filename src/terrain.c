@@ -7,29 +7,29 @@
 #include <stdlib.h>
 
 terrain
-terrain_create(float width, float height, texture_data heightmap_texture)
+terrain_create(float width, float depth, float height_scale, texture_data heightmap_texture)
 {
     terrain created_terrain = (terrain){0};
 
     created_terrain.shader = (shader_program*)malloc(sizeof(shader_program));
     *created_terrain.shader = load_shader("shaders/simple.vert", "shaders/textured.frag", 0);
-    
-    // TODO: Parameterize the mountain size.
-    // float mountain_size = 100.0f;
+
+    created_terrain.height_scale = height_scale;
+
     
     created_terrain.heightmap = heightmap_load_from_texture(heightmap_texture,
 							    heightmap_texture.width,
 							    heightmap_texture.height);
 
     // TODO: Parameterize the chunk size.
-    float chunk_width = 256.0f;
-    float chunk_height = 256.0f;
+    float chunk_width = 1024.0f;
+    float chunk_height = 1024.0f;
     
     created_terrain.chunk_width = chunk_width;
     created_terrain.chunk_height = chunk_height;
     
     int terrain_chunks_x = (int)(width / chunk_width);
-    int terrain_chunks_y = (int)(height / chunk_height);
+    int terrain_chunks_y = (int)(depth / chunk_height);
 
     int chunk_count = (terrain_chunks_x * terrain_chunks_y);
 
@@ -43,13 +43,13 @@ terrain_create(float width, float height, texture_data heightmap_texture)
     int heightmap_size_y = (int)(created_terrain.heightmap.height / terrain_chunks_y);
 
     platform_log("creating terrain\n");
-    platform_log(" size:\t\t%.0fx%.0f\n",               width, height);
+    platform_log(" size:\t\t%.0fx%.0f\n",               width, depth);
     platform_log(" chunks:\t%.0fx%.0f, %d\n",	        chunk_width, chunk_height, chunk_count);
     platform_log(" heightmap:\t%dx%d\n",		created_terrain.heightmap.width,
 		                                        created_terrain.heightmap.height);
+    platform_log(" height scale:\t %.0f\n",             height_scale);
 
-    float chunk_location_x = 0.0f;
-    float chunk_location_y = 0.0f;
+    float chunk_location_y = -depth * 0.5f;
     
     int heightmap_x = 0;
     int heightmap_y = 0;
@@ -59,7 +59,8 @@ terrain_create(float width, float height, texture_data heightmap_texture)
     int chunk_x, chunk_y;
     for(chunk_y = 0; chunk_y < terrain_chunks_y; ++chunk_y)
     {
-	chunk_location_x = 0.0f;
+	float chunk_location_x = -width * 0.5f;
+	
 	heightmap_x = 0;
 	
 	for(chunk_x = 0; chunk_x < terrain_chunks_x; ++chunk_x)
@@ -98,7 +99,8 @@ terrain_generate_chunk(terrain* terrain,
 						     terrain->chunk_width, terrain->chunk_height,
 						     heightmap_x, heightmap_y,
 						     heightmap_w, heightmap_h,
-						     resolution, resolution, 60.0f);
+						     resolution, resolution,
+	                                             terrain->height_scale);
 
     chunk.mesh = load_mesh(mesh_data, 0);
     mesh_data_free(&mesh_data);

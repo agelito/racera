@@ -81,7 +81,7 @@ game_initialize(game_state* state)
 	platform_log("load terrain\n");
 	
 	texture_data heightmap_texture = texture_create_from_tga("heightmaps/heightmap.tga");
-	state->terrain = terrain_create(1024.0f, 1024.0f, heightmap_texture);
+	state->terrain = terrain_create(4096.0f, 4096.0f, 400.0f, heightmap_texture);
 	texture_data_free(&heightmap_texture);
     }
     
@@ -105,22 +105,22 @@ control_camera(game_state* state)
     vector3 camera_movement = (vector3){0};
     if(keyboard_is_down(&state->keyboard, VKEY_W))
     {
-	camera_movement.z += 100.0f * state->time_frame;
+	camera_movement.z += 250.0f * state->time_frame;
     }
 
     if(keyboard_is_down(&state->keyboard, VKEY_S))
     {
-	camera_movement.z -= 100.0f * state->time_frame;
+	camera_movement.z -= 250.0f * state->time_frame;
     }
 
     if(keyboard_is_down(&state->keyboard, VKEY_A))
     {
-	camera_movement.x -= 100.0f * state->time_frame;
+	camera_movement.x -= 250.0f * state->time_frame;
     }
 
     if(keyboard_is_down(&state->keyboard, VKEY_D))
     {
-	camera_movement.x += 100.0f * state->time_frame;
+	camera_movement.x += 250.0f * state->time_frame;
     }
 
     matrix4 camera_rotation = matrix_rotation_pitch_yaw(pitch_yaw_roll.x, pitch_yaw_roll.y);

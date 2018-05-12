@@ -28,10 +28,12 @@ typedef struct terrain {
     int chunk_capacity;
 
     terrain_chunk* chunks;
+
+    float height_scale;
 } terrain;
 
 terrain
-terrain_create(float width, float height, texture_data heightmap_texture);
+terrain_create(float width, float depth, float height_scale, texture_data heightmap_texture);
 
 terrain_chunk
 terrain_generate_chunk(terrain* terrain,

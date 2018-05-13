@@ -85,6 +85,11 @@ terrain_chunk_setup_detail_texture(render_queue* queue, terrain_chunk* chunk)
 {
     if(chunk->setup.state == terrain_chunk_setup_draw)
     {
+	// TODO: Pushing the projection and view happens in the
+	// middle of any frame. May need to restore the previous
+	// projection and view matrix after the detail texture
+	// has been rendered.
+	
 	matrix4 projection = matrix_orthographic((float)1.0f, (float)1.0f, 0.1f, 1.0f);
 	
 	renderer_queue_push_projection(queue, projection);

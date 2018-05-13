@@ -7,6 +7,7 @@
 #include "texture.h"
 #include "mesh.h"
 #include "material.h"
+#include "render_target.h"
 
 // TODO: Font shouldn't need to be dependency in renderer.h
 #include "../font.h"
@@ -25,6 +26,9 @@ struct render_queue
     loaded_mesh text_buffer;
     uint32 text_buffer_capacity;
     uint32 text_buffer_count;
+
+    int render_width;
+    int render_height;
 };
 
 void
@@ -32,6 +36,15 @@ renderer_apply_uniforms(shader_program* shader, shader_uniform_group* group);
 
 render_queue
 renderer_queue_create(uint32 capacity, uint32 text_capacity);
+
+void
+renderer_queue_set_render_size(render_queue* queue, int width, int height);
+
+void
+renderer_queue_push_projection(render_queue* queue, matrix4 projection);
+
+void
+renderer_queue_push_view(render_queue* queue, matrix4 view);
 
 void
 renderer_queue_push_clear(render_queue* queue, uint32 clear_flags, float clear_color[4]);
@@ -43,6 +56,9 @@ renderer_queue_push_draw(render_queue* queue, loaded_mesh* mesh,
 void
 renderer_queue_push_text(render_queue* queue, char* text, loaded_font* font,
 			 real32 font_size, shader_program* shader, matrix4 transform);
+
+void
+renderer_queue_push_target(render_queue* queue, render_target* target);
 
 void
 renderer_queue_clear(render_queue* queue);

@@ -127,6 +127,35 @@ load_mesh(mesh_data data, bool32 dynamic)
 }
 
 void
+unload_mesh(loaded_mesh* mesh)
+{
+    GL_CALL(glDeleteBuffers, MESH_MAX_VERTEX_BUFFERS, mesh->vertex_buffer);
+
+    uint32 i;
+    for_range(i, MESH_MAX_VERTEX_BUFFERS)
+    {
+	mesh->vertex_buffer[i] = 0;
+    }
+
+    GL_CALL(glDeleteBuffers, 1, &mesh->index_buffer);
+    mesh->index_buffer = 0;
+
+    for_range(i, mesh->layout_count)
+    {
+	input_layout* layout = (mesh->layouts + i);
+
+	GL_CALL(glDeleteVertexArrays, 1, &layout->vertex_array);
+
+	layout->vertex_array = 0;
+	layout->attribute_mask = 0;
+    }
+
+    mesh->layout_count = 0;
+
+    mesh_data_free(&mesh->data);
+}
+
+void
 update_mesh(loaded_mesh* mesh, uint32 offset, uint32 count)
 {
     GLuint* vertex_buffer = 0;

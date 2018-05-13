@@ -35,6 +35,7 @@ struct game_state
     shader_program visualize_colors;
     shader_program visualize_normals;
     shader_program visualize_texcoords;
+    shader_program postfx_test;
 
     render_queue render_queue;
 
@@ -48,6 +49,7 @@ struct game_state
 
     material cup_material;
     material text_background;
+    material postfx;
 
     terrain terrain;
 
@@ -57,6 +59,8 @@ struct game_state
     
     int created_cube_count;
     vector3 created_cube_positions[MAX_CUBES];
+
+    render_target scene_target;
 };
 
 void

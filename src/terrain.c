@@ -7,7 +7,8 @@
 #include <stdlib.h>
 
 terrain
-terrain_create(float width, float depth, float height_scale, texture_data heightmap_texture)
+terrain_create(float width, float depth, float height_scale, float chunk_width, float chunk_depth,
+	       texture_data heightmap_texture)
 {
     terrain created_terrain = (terrain){0};
 
@@ -21,15 +22,11 @@ terrain_create(float width, float depth, float height_scale, texture_data height
 							    heightmap_texture.width,
 							    heightmap_texture.height);
 
-    // TODO: Parameterize the chunk size.
-    float chunk_width = 1024.0f;
-    float chunk_height = 1024.0f;
-    
     created_terrain.chunk_width = chunk_width;
-    created_terrain.chunk_height = chunk_height;
+    created_terrain.chunk_depth = chunk_depth;
     
     int terrain_chunks_x = (int)(width / chunk_width);
-    int terrain_chunks_y = (int)(depth / chunk_height);
+    int terrain_chunks_y = (int)(depth / chunk_depth);
 
     int chunk_count = (terrain_chunks_x * terrain_chunks_y);
 
@@ -44,7 +41,7 @@ terrain_create(float width, float depth, float height_scale, texture_data height
 
     platform_log("creating terrain\n");
     platform_log(" size:\t\t%.0fx%.0f\n",               width, depth);
-    platform_log(" chunks:\t%.0fx%.0f, %d\n",	        chunk_width, chunk_height, chunk_count);
+    platform_log(" chunks:\t%.0fx%.0f, %d\n",	        chunk_width, chunk_depth, chunk_count);
     platform_log(" heightmap:\t%dx%d\n",		created_terrain.heightmap.width,
 		                                        created_terrain.heightmap.height);
     platform_log(" height scale:\t %.0f\n",             height_scale);
@@ -76,11 +73,55 @@ terrain_create(float width, float depth, float height_scale, texture_data height
 	    heightmap_x += heightmap_size_x;
 	}
 
-	chunk_location_y += chunk_height;
+	chunk_location_y += chunk_depth;
 	heightmap_y += heightmap_size_y;
     }
 
     return created_terrain;
+}
+
+internal void
+terrain_chunk_setup_detail_texture(render_queue* queue, terrain_chunk* chunk)
+{
+    if(chunk->setup.state == terrain_chunk_setup_draw)
+    {
+	matrix4 projection = matrix_orthographic((float)1.0f, (float)1.0f, 0.1f, 1.0f);
+	
+	renderer_queue_push_projection(queue, projection);
+
+	vector3 eye = (vector3){{{0.0f, 0.0f, -0.5f}}};
+	vector3 at = (vector3){{{0.0f, 0.0f, 0.5f}}};
+	vector3 up = (vector3){{{0.0f, 1.0f, 0.0f}}};
+	
+	matrix4 view = matrix_look_at(eye, at, up);
+	
+	renderer_queue_push_view(queue, view);
+	
+	renderer_queue_push_target(queue, &chunk->setup.target);
+	float clear_color[] = {0.2f, 0.2f, 0.2f, 1.0f};
+	renderer_queue_push_clear(queue, GL_COLOR_BUFFER_BIT, clear_color);
+
+	material_set_texture(&chunk->material, "main_texture", &chunk->setup.control);
+	renderer_queue_push_draw(queue, &chunk->setup.quad, &chunk->material, matrix_identity());
+	renderer_queue_push_target(queue, 0);
+
+	chunk->setup.state = terrain_chunk_setup_finalize;
+
+
+    }
+    else if(chunk->setup.state == terrain_chunk_setup_finalize)
+    {
+	unload_texture(&chunk->setup.control);
+	render_target_destroy(&chunk->setup.target);
+
+	unload_mesh(&chunk->setup.quad);
+	unload_texture(&chunk->setup.control);
+
+	material_set_texture(&chunk->material, "main_texture", &chunk->texture);
+
+	chunk->setup_is_finished = 1;
+    }
+    
 }
 
 terrain_chunk
@@ -96,7 +137,7 @@ terrain_generate_chunk(terrain* terrain,
 
     int resolution = 256;
     mesh_data mesh_data = mesh_create_from_heightmap(terrain->heightmap,
-						     terrain->chunk_width, terrain->chunk_height,
+						     terrain->chunk_width, terrain->chunk_depth,
 						     heightmap_x, heightmap_y,
 						     heightmap_w, heightmap_h,
 						     resolution, resolution,
@@ -174,12 +215,35 @@ terrain_generate_chunk(terrain* terrain,
 	    write_pixel = texture_pack_rgba(write_pixel, color);
 	}
     }
-
-    chunk.texture = load_texture(texture);
-    texture_data_free(&chunk.texture.data);
     
     chunk.material = material_create(terrain->shader, KB(1));
-    material_set_texture(&chunk.material, "main_texture", &chunk.texture);
+
+    { // NOTE: Init setup parameters.
+	chunk.setup.control = load_texture(texture, 0);
+	
+	// TODO: Reuse one render target for all generated chunks.
+	render_target target = render_target_create(chunk.setup.control.data.width,
+						    chunk.setup.control.data.height,
+						    1, 0);
+
+	texture_data texture_data;
+	texture_data.width = texture.width;
+	texture_data.height = texture.height;
+	texture_data.components = 4;
+	texture_data.colors = 0;
+
+	// TODO: Enable mipmaps.
+	chunk.texture = load_texture(texture_data, 0);
+
+	render_target_attach_color(&target, 0, &chunk.texture);
+	chunk.setup.target = target;
+
+	// TODO: Reuse one quad for all generated chunks.
+	chunk.setup.quad = load_mesh(mesh_create_quad(), 0);
+	mesh_data_free(&chunk.setup.quad.data);
+	
+	chunk.setup.state = terrain_chunk_setup_draw;
+    }
 
     return chunk;
 }
@@ -207,8 +271,14 @@ terrain_render(render_queue* queue, terrain* terrain)
     for_range(i, terrain->chunk_count)
     {
 	terrain_chunk* chunk = (terrain->chunks + i);
-
-	matrix4 translation = matrix_translate(chunk->position_x, 0.0f, chunk->position_y);
-	renderer_queue_push_draw(queue, &chunk->mesh, &chunk->material, translation);
+	if(chunk->setup_is_finished)
+	{
+	    matrix4 translation = matrix_translate(chunk->position_x, 0.0f, chunk->position_y);
+	    renderer_queue_push_draw(queue, &chunk->mesh, &chunk->material, translation);
+	}
+	else
+	{
+	    terrain_chunk_setup_detail_texture(queue, chunk);
+	}
     }
 }

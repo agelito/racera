@@ -82,6 +82,9 @@ loaded_mesh
 load_mesh(mesh_data data, bool32 dynamic);
 
 void
+unload_mesh(loaded_mesh* mesh);
+
+void
 update_mesh(loaded_mesh* mesh, uint32 offset, uint32 count);
 
 mesh_data

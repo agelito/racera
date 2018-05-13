@@ -32,8 +32,10 @@ opengl_load_functions()
     gl_functions gl = (gl_functions){0};
     
     gl.glGenVertexArrays	 = GL_PROC_ADDR(glGenVertexArrays);
+    gl.glDeleteVertexArrays      = GL_PROC_ADDR(glDeleteVertexArrays);
     gl.glBindVertexArray	 = GL_PROC_ADDR(glBindVertexArray);
     gl.glGenBuffers		 = GL_PROC_ADDR(glGenBuffers);
+    gl.glDeleteBuffers           = GL_PROC_ADDR(glDeleteBuffers);
     gl.glBindBuffer		 = GL_PROC_ADDR(glBindBuffer);
     gl.glBufferData		 = GL_PROC_ADDR(glBufferData);
     gl.glBufferSubData		 = GL_PROC_ADDR(glBufferSubData);
@@ -71,6 +73,12 @@ opengl_load_functions()
     gl.glUniform4iv = GL_PROC_ADDR(glUniform4iv);
     
     gl.glGenerateMipmap = GL_PROC_ADDR(glGenerateMipmap);
+
+    gl.glGenFramebuffers	= GL_PROC_ADDR(glGenFramebuffers);
+    gl.glDeleteFramebuffers	= GL_PROC_ADDR(glDeleteFramebuffers);
+    gl.glBindFramebuffer	= GL_PROC_ADDR(glBindFramebuffer);
+    gl.glFramebufferTexture2D	= GL_PROC_ADDR(glFramebufferTexture2D);
+    gl.glCheckFramebufferStatus = GL_PROC_ADDR(glCheckFramebufferStatus);
 
     return gl;
 }

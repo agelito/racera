@@ -15,11 +15,16 @@ typedef enum render_queue_type render_queue_type;
 typedef struct render_queue_item render_queue_item;
 typedef struct render_queue_clear render_queue_clear;
 typedef struct render_queue_draw render_queue_draw;
+typedef struct render_queue_target render_queue_target;
+typedef struct render_queue_matrix render_queue_matrix;
 
 enum render_queue_type
 {
     render_queue_type_clear,
-    render_queue_type_draw
+    render_queue_type_draw,
+    render_queue_type_target,
+    render_queue_type_projection,
+    render_queue_type_view,
 };
 
 struct render_queue_item
@@ -43,6 +48,17 @@ struct render_queue_draw
     uint32 draw_element_offset;
     uint32 draw_element_count;
 };
+
+struct render_queue_target
+{
+    render_target* target;
+};
+
+struct render_queue_matrix
+{
+    matrix4 matrix;
+};
+    
 
 static void
 renderer_upload_uniform(shader_uniform* uniform, int count, unsigned char* data)
@@ -241,6 +257,13 @@ renderer_queue_create(uint32 capacity, uint32 text_capacity)
     return queue;
 }
 
+void
+renderer_queue_set_render_size(render_queue* queue, int width, int height)
+{
+    queue->render_width = width;
+    queue->render_height = height;
+}
+
 static inline void
 renderer_queue_push_item(render_queue* queue, render_queue_type type,
 			 void* command_data, uint16 command_size)
@@ -264,6 +287,26 @@ renderer_queue_push_item(render_queue* queue, render_queue_type type,
     platform_copy_memory((queue->queue_items + push_data_offset), command_data, command_size);
 
     queue->queue_used += push_size;
+}
+
+void
+renderer_queue_push_projection(render_queue* queue, matrix4 projection)
+{
+    render_queue_matrix matrix;
+    matrix.matrix = projection;
+
+    renderer_queue_push_item(queue, render_queue_type_projection,
+			     &matrix, sizeof(render_queue_matrix));
+}
+
+void
+renderer_queue_push_view(render_queue* queue, matrix4 view)
+{
+    render_queue_matrix matrix;
+    matrix.matrix = view;
+
+    renderer_queue_push_item(queue, render_queue_type_view,
+			   &matrix, sizeof(render_queue_matrix));
 }
 
 void
@@ -435,6 +478,16 @@ renderer_queue_push_text(render_queue* queue, char* text, loaded_font* font,
 }
 
 void
+renderer_queue_push_target(render_queue* queue, render_target* target)
+{
+    render_queue_target set_target;
+    set_target.target = target;
+    
+    renderer_queue_push_item(queue, render_queue_type_target,
+			     &set_target, sizeof(render_queue_target));
+}
+
+void
 renderer_queue_clear(render_queue* queue)
 {
     queue->queue_used = 0;
@@ -466,18 +519,36 @@ renderer_queue_process(render_queue* queue)
     loaded_mesh* bound_mesh = 0;
     material* bound_material = 0;
 
+    int rebind_uniforms = 0;
+
     if(queue->text_buffer_count)
     {
 	update_mesh(&queue->text_buffer, 0, queue->text_buffer_count);
     }
 
-        uint32 queue_processed = 0;
+    uint32 queue_processed = 0;
     while(queue_processed < queue->queue_used)
     {
 	uint8* queue_head = (queue->queue_items + queue_processed);
 	render_queue_item* item = (render_queue_item*)queue_head;
 	switch(item->type)
 	{
+	case render_queue_type_projection: {
+	    render_queue_matrix* matrix =
+		(render_queue_matrix*)(queue_head + sizeof(render_queue_item));
+
+	    renderer_queue_set_projection(queue, matrix->matrix);
+
+	    rebind_uniforms = 1;
+	} break;
+	case render_queue_type_view: {
+	    render_queue_matrix* matrix =
+		(render_queue_matrix*)(queue_head + sizeof(render_queue_item));
+
+	    renderer_queue_set_view(queue, matrix->matrix);
+
+	    rebind_uniforms = 1;
+	} break;
 	case render_queue_type_clear: {
 	    render_queue_clear* clear =
 		(render_queue_clear*)(queue_head + sizeof(render_queue_item));
@@ -501,12 +572,18 @@ renderer_queue_process(render_queue* queue)
 	    
 		configure_for_transparency(shader->transparent);
 	 
-		renderer_apply_uniforms(shader, &queue->uniforms);
+		rebind_uniforms = 1;
 
 		material_apply(material, &queue->uniforms_per_object);
 	    
 		bound_material = material;
 		rebind_mesh = 1;
+	    }
+
+	    if(rebind_uniforms)
+	    {
+		renderer_apply_uniforms(shader, &queue->uniforms);
+		rebind_uniforms = 0;
 	    }
 	
 	    loaded_mesh* mesh = draw->mesh;
@@ -533,6 +610,25 @@ renderer_queue_process(render_queue* queue)
 		glDrawElements(GL_TRIANGLES, draw->draw_element_count,
 			       GL_UNSIGNED_INT, (void*)0);
 	    }
+	} break;
+	case render_queue_type_target:
+	{
+	    render_queue_target* set_target =
+		(render_queue_target*)(queue_head + sizeof(render_queue_item));
+
+	    if(set_target->target)
+	    {
+		render_target_bind(set_target->target);
+
+		GL_CALLC(glViewport, 0, 0, set_target->target->width, set_target->target->height);
+	    }
+	    else
+	    {
+		render_target_unbind();
+
+		GL_CALLC(glViewport, 0, 0, queue->render_width, queue->render_height);
+	    }
+
 	} break;
 	}
 

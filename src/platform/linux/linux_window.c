@@ -155,7 +155,6 @@ resize_viewport(window_x11* window_context)
 {
     XWindowAttributes window_attributes;
     XGetWindowAttributes(window_context->display, window_context->window, &window_attributes);
-    glViewport(0, 0, window_attributes.width, window_attributes.height);
     window_context->width = window_attributes.width;
     window_context->height = window_attributes.height;
 }

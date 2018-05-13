@@ -8,19 +8,26 @@
     texture.colors + (x + y * texture.width) * texture.components
 
 loaded_texture
-load_texture(texture_data data)
+load_texture(texture_data data, int mipmap)
 {
     loaded_texture texture;
 
     GLuint handle;
-    glGenTextures(1, &handle);
-    glBindTexture(GL_TEXTURE_2D, handle);
+    GL_CALLC(glGenTextures, 1, &handle);
+    GL_CALLC(glBindTexture, GL_TEXTURE_2D, handle);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    GL_CALLC(glTexParameteri, GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    if(mipmap)
+    {
+	GL_CALLC(glTexParameteri, GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    }
+    else
+    {
+	GL_CALLC(glTexParameteri, GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    }
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    GL_CALLC(glTexParameteri, GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    GL_CALLC(glTexParameteri, GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     GLenum texture_format = GL_RGB;
     if(data.components == 4)
@@ -28,16 +35,55 @@ load_texture(texture_data data)
 	texture_format = GL_RGBA;
     }
 
-    glTexImage2D(GL_TEXTURE_2D, 0, texture_format, data.width, data.height,
-		 0, texture_format, GL_UNSIGNED_BYTE, data.colors);
-    GL_CALL(glGenerateMipmap, GL_TEXTURE_2D);
+    GL_CALLC(glTexImage2D, GL_TEXTURE_2D, 0, texture_format, data.width, data.height,
+	     0, texture_format, GL_UNSIGNED_BYTE, data.colors);
 
-    glBindTexture(GL_TEXTURE_2D, 0);
+    if(mipmap)
+    {
+	GL_CALL(glGenerateMipmap, GL_TEXTURE_2D);
+    }
+
+    GL_CALLC(glBindTexture, GL_TEXTURE_2D, 0);
 
     texture.handle = handle;
     texture.data = data;
     
     return texture;
+}
+
+loaded_texture
+load_texture_depth(int width, int height)
+{
+    loaded_texture texture = (loaded_texture){0};
+
+    GLuint texture_depth;
+    GL_CALLC(glGenTextures, 1, &texture_depth);
+    GL_CALLC(glBindTexture, GL_TEXTURE_2D, texture_depth);
+    GL_CALLC(glTexParameteri, GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    GL_CALLC(glTexParameteri, GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    GL_CALLC(glTexParameteri, GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    GL_CALLC(glTexParameteri, GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    GL_CALLC(glTexImage2D, GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0,
+	     GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
+    GL_CALLC(glBindTexture, GL_TEXTURE_2D, 0);
+
+    texture.handle = texture_depth;
+    texture.data.width = width;
+    texture.data.height = height;
+
+    return texture;
+}
+
+void
+unload_texture(loaded_texture* texture)
+{
+    texture_data_free(&texture->data);
+    
+    if(texture->handle)
+    {
+	GL_CALLC(glDeleteTextures, 1, &texture->handle);
+	texture->handle = 0;
+    }
 }
 
 texture_data

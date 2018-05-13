@@ -10,9 +10,10 @@
 typedef struct
 {
     PFNGLGENVERTEXARRAYSPROC            glGenVertexArrays;
+    PFNGLDELETEVERTEXARRAYSPROC         glDeleteVertexArrays;
     PFNGLBINDVERTEXARRAYPROC		glBindVertexArray;
     PFNGLGENBUFFERSPROC			glGenBuffers;
-    PFNGLDELETEBUFFERSPROC		glDeleteBuffers;
+    PFNGLDELETEBUFFERSPROC              glDeleteBuffers;
     PFNGLBINDBUFFERPROC			glBindBuffer;
     PFNGLBUFFERDATAPROC			glBufferData;
     PFNGLBUFFERSUBDATAPROC		glBufferSubData;
@@ -48,6 +49,12 @@ typedef struct
     PFNGLUNIFORM4IVPROC glUniform4iv;    
     
     PFNGLGENERATEMIPMAPPROC	glGenerateMipmap;
+
+    PFNGLGENFRAMEBUFFERSPROC		glGenFramebuffers;
+    PFNGLDELETEFRAMEBUFFERSPROC         glDeleteFramebuffers;
+    PFNGLBINDFRAMEBUFFERPROC		glBindFramebuffer;
+    PFNGLFRAMEBUFFERTEXTURE2DPROC	glFramebufferTexture2D;
+    PFNGLCHECKFRAMEBUFFERSTATUSPROC     glCheckFramebufferStatus;
 } gl_functions;
 
 void
@@ -72,8 +79,16 @@ extern gl_functions global_gl;
     opengl_trace((char*)__FUNCTION__, #function, __FILE__, __LINE__);	\
     opengl_check_error(#function, __FILE__, __LINE__)
 
+#define GL_CALLC(function, ...) function(__VA_ARGS__);			\
+    opengl_trace((char*)__FUNCTION__, #function, __FILE__, __LINE__);	\
+    opengl_check_error(#function, __FILE__, __LINE__)
+
+
+
 #else // !OPENGL_DEBUG
 #define GL_CALL(function, ...) global_gl.function(__VA_ARGS__)
+#define GL_CALLC(function, ...) function(__VA_ARGS__);
+
 #endif // OPENGL_DEBUG
 
 #endif // OPENGL_H_INCLUDED

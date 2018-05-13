@@ -19,7 +19,9 @@ typedef struct
     texture_data data;
 } loaded_texture;
 
-loaded_texture load_texture(texture_data data);
+loaded_texture load_texture(texture_data data, int mipmap);
+loaded_texture load_texture_depth(int width, int height);
+void unload_texture(loaded_texture* texture);
 
 texture_data texture_create_checker(int width, int height, int checker_size);
 texture_data texture_create_from_tga(char* path);

@@ -39,6 +39,8 @@ game_initialize(game_state* state)
 	    load_shader(vertex_shader, "shaders/colors_visualize.frag", 0);
 	state->visualize_texcoords =
 	    load_shader(vertex_shader, "shaders/texcoords_visualize.frag", 0);
+	state->postfx_test =
+	    load_shader(vertex_shader, "shaders/postfx_test.frag", 0);
     }
 
     { // NOTE: Load Meshes
@@ -57,7 +59,7 @@ game_initialize(game_state* state)
     { // NOTE: Load Textures
 	platform_log("load textures\n");
 	
-	state->checker = load_texture(texture_create_checker(256, 256, 64));
+	state->checker = load_texture(texture_create_checker(256, 256, 64), 1);
 	texture_data_free(&state->checker.data);
     }
 
@@ -75,19 +77,24 @@ game_initialize(game_state* state)
 	state->text_background = material_create(&state->colored, KB(1));
 	material_set_color(&state->text_background, "color",
 			   vector4_create(0.0f, 0.0f, 0.0f, 0.75f));
+
+	state->postfx = material_create(&state->postfx_test, KB(1));
     }
 
     { // NOTE: Load terrain
 	platform_log("load terrain\n");
 	
 	texture_data heightmap_texture = texture_create_from_tga("heightmaps/heightmap.tga");
-	state->terrain = terrain_create(4096.0f, 4096.0f, 400.0f, heightmap_texture);
+	state->terrain = terrain_create(4096.0f, 4096.0f, 400.0f, 1024.0f, 1024.0f, heightmap_texture);
 	texture_data_free(&heightmap_texture);
     }
     
     state->camera_position = (vector3){{{-10.2f, 13.5f, -10.2f}}};
     state->camera_pitch_yaw_roll = vector3_create(-31.0f, -55.0f, 0.0f);
 
+    state->scene_target = render_target_create(state->screen_width, state->screen_height, 1, 1);
+
+    platform_log("rt: %d %d\n", state->screen_width, state->screen_height);
 	
     state->initialized = 1;
 }
@@ -139,6 +146,17 @@ game_update_and_render(game_state* state)
 	game_initialize(state);
     }
 
+    renderer_queue_set_render_size(&state->render_queue, state->screen_width, state->screen_height);
+
+    if(state->screen_width != state->scene_target.width ||
+       state->screen_height != state->scene_target.height)
+    {
+	render_target_destroy(&state->scene_target);
+	state->scene_target = render_target_create(state->screen_width, state->screen_height, 1, 1);
+
+	platform_log("rt: %d %d\n", state->screen_width, state->screen_height);
+    }
+
     if(keyboard_is_pressed(&state->keyboard, VKEY_ESCAPE))
     {
 	state->should_quit = 1;
@@ -157,6 +175,17 @@ game_update_and_render(game_state* state)
 	state->created_cube_count -= 1;
     }
 
+    float right = (float)state->screen_width * 0.5f;
+    float top = (float)state->screen_height * 0.5f;
+    matrix4 projection = matrix_perspective(80.0f, right / top, 0.1f, 2000.0f);
+    renderer_queue_push_projection(&state->render_queue, projection);
+
+    matrix4 view = matrix_look_fps(state->camera_position, state->camera_pitch_yaw_roll.x,
+				   state->camera_pitch_yaw_roll.y);
+    renderer_queue_push_view(&state->render_queue, view);
+
+    renderer_queue_push_target(&state->render_queue, &state->scene_target);
+
     renderer_queue_push_clear(&state->render_queue, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT,
 			      (float[4]){0.1f, 0.1f, 0.1f, 1.0f});
 
@@ -172,20 +201,34 @@ game_update_and_render(game_state* state)
 	    renderer_queue_push_draw(&state->render_queue, &state->cup, &state->cup_material, transform);
 	}
 
-	float right = (float)state->screen_width * 0.5f;
-	float top = (float)state->screen_height * 0.5f;
-	matrix4 projection = matrix_perspective(80.0f, right / top, 0.1f, 2000.0f);
-	renderer_queue_set_projection(&state->render_queue, projection);
-
-	matrix4 view = matrix_look_fps(state->camera_position, state->camera_pitch_yaw_roll.x,
-				       state->camera_pitch_yaw_roll.y);
-	renderer_queue_set_view(&state->render_queue, view);
-
 	renderer_queue_process(&state->render_queue);
 	renderer_queue_clear(&state->render_queue);
     }
 
+    renderer_queue_push_target(&state->render_queue, 0);
+
+    projection = matrix_orthographic((float)state->screen_width,
+				     (float)state->screen_height, 1.0f, 100.0f);
+    renderer_queue_push_projection(&state->render_queue, projection);
+
+    vector3 eye = (vector3){{{0.0f, 0.0f, -1.0f}}};
+    vector3 at = (vector3){0};
+    vector3 up = (vector3){{{0.0f, 1.0f, 0.0f}}};
+	
+    view = matrix_look_at(eye, at, up);
+    renderer_queue_push_view(&state->render_queue, view);
+
     { // NOTE: Draw UI
+	matrix4 fullscreen_quad = matrix_scale(state->screen_width, state->screen_height, 1.0f);
+
+	vector4 fx_params = vector4_create(state->time_wall, 1.0f, 16.0f, 0.0f);
+	material_set_named_value(&state->postfx, "fx_params", &fx_params, material_data_type_vector4,
+	 			 sizeof(vector4));
+	material_set_texture(&state->postfx, "main_texture", &state->scene_target.created_color);
+	
+	renderer_queue_push_draw(&state->render_queue, &state->quad,
+				 &state->postfx, fullscreen_quad);
+	
 	char timings_text[256];
 	platform_format(timings_text, 256, "frame time: %f", state->time_frame);
 
@@ -193,7 +236,7 @@ game_update_and_render(game_state* state)
 						(real32)state->screen_height * 0.45f);
 	ui_draw_label(state, text_position, timings_text, 26.0f, 10.0f, &state->deja_vu);
 
-	text_position.y -= 26.0f;
+	text_position.y -= 32.0f;
 	
 	char camera_text[256];
 	platform_format(camera_text, 256, "camera p: %.2f %.2f %.2f\ncamera r: %.2f %.2f",
@@ -203,17 +246,6 @@ game_update_and_render(game_state* state)
 
 
 	text_position.y -= 52.0f;
-
-	matrix4 projection = matrix_orthographic((float)state->screen_width,
-						 (float)state->screen_height, 1.0f, 100.0f);
-	renderer_queue_set_projection(&state->render_queue, projection);
-
-	vector3 eye = (vector3){{{0.0f, 0.0f, -1.0f}}};
-	vector3 at = (vector3){0};
-	vector3 up = (vector3){{{0.0f, 1.0f, 0.0f}}};
-	
-	matrix4 view = matrix_look_at(eye, at, up);
-	renderer_queue_set_view(&state->render_queue, view);
     
 	renderer_queue_process(&state->render_queue);
 	renderer_queue_clear(&state->render_queue);

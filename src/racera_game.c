@@ -21,7 +21,8 @@ game_initialize(game_state* state)
 {
     opengl_initialize();
 
-    state->render_queue = renderer_queue_create(KB(64), KB(16));
+    state->render_queue = renderer_queue_create(KB(64));
+    state->text_renderer = text_renderer_create(KB(64), KB(4));
 
     { // NOTE: Load shaders
 	platform_log("load shaders\n");
@@ -246,6 +247,10 @@ game_update_and_render(game_state* state)
 
 
 	text_position.y -= 52.0f;
+
+	text_renderer_prepare(&state->text_renderer);
+	text_renderer_draw(&state->text_renderer, &state->render_queue);
+	text_renderer_clear(&state->text_renderer);
     
 	renderer_queue_process(&state->render_queue);
 	renderer_queue_clear(&state->render_queue);

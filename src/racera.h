@@ -3,6 +3,7 @@
 
 #include "math.h"
 #include "font.h"
+#include "text_renderer.h"
 #include "rendering/renderer.h"
 
 #include "terrain.h"
@@ -38,6 +39,8 @@ struct game_state
     shader_program postfx_test;
 
     render_queue render_queue;
+
+    text_renderer text_renderer;
 
     loaded_mesh cube;
     loaded_mesh quad;

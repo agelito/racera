@@ -1,5 +1,7 @@
 // ui.c
 
+#include "text_renderer.h"
+
 void
 ui_draw_label(game_state* state, vector2 position, char* text, real32 size, real32 border,
 	      loaded_font* font)
@@ -23,6 +25,6 @@ ui_draw_label(game_state* state, vector2 position, char* text, real32 size, real
 
     renderer_queue_push_draw(&state->render_queue, &state->quad,
 			     &state->text_background, text_background_transform);
-    renderer_queue_push_text(&state->render_queue, text, font,
+    text_renderer_push_text(&state->text_renderer, text, font,
 			     size, &state->text, text_transform);
 }

@@ -126,7 +126,6 @@ terrain_chunk_setup_detail_texture(render_queue* queue, terrain_chunk* chunk)
 
 	chunk->setup_is_finished = 1;
     }
-    
 }
 
 terrain_chunk

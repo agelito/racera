@@ -9,9 +9,6 @@
 #include "material.h"
 #include "render_target.h"
 
-// TODO: Font shouldn't need to be dependency in renderer.h
-#include "../font.h"
-
 typedef struct render_queue render_queue;
 
 struct render_queue
@@ -23,10 +20,6 @@ struct render_queue
     shader_uniform_group uniforms;
     shader_uniform_group uniforms_per_object;
 
-    loaded_mesh text_buffer;
-    uint32 text_buffer_capacity;
-    uint32 text_buffer_count;
-
     int render_width;
     int render_height;
 };
@@ -35,10 +28,7 @@ void
 renderer_apply_uniforms(shader_program* shader, shader_uniform_group* group);
 
 render_queue
-renderer_queue_create(uint32 capacity, uint32 text_capacity);
-
-void
-renderer_queue_set_render_size(render_queue* queue, int width, int height);
+renderer_queue_create(uint32 capacity);
 
 void
 renderer_queue_push_projection(render_queue* queue, matrix4 projection);
@@ -54,8 +44,9 @@ renderer_queue_push_draw(render_queue* queue, loaded_mesh* mesh,
 			 material* material, matrix4 transform);
 
 void
-renderer_queue_push_text(render_queue* queue, char* text, loaded_font* font,
-			 real32 font_size, shader_program* shader, matrix4 transform);
+renderer_queue_push_draw_elements(render_queue* queue, loaded_mesh* mesh,
+				  material* material, matrix4 transform,
+				  uint32 element_offset, uint32 element_count);
 
 void
 renderer_queue_push_target(render_queue* queue, render_target* target);
@@ -65,6 +56,9 @@ renderer_queue_clear(render_queue* queue);
 
 void
 renderer_queue_process(render_queue* queue);
+
+void
+renderer_queue_set_render_size(render_queue* queue, int width, int height);
 
 void
 renderer_queue_set_projection(render_queue* queue, matrix4 projection);

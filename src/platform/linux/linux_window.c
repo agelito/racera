@@ -116,7 +116,7 @@ create_window(int width, int height, char* title)
     
     if(window_context.glXSwapIntervalEXT)
     {
-	window_context.glXSwapIntervalEXT(display, window, 1);
+	window_context.glXSwapIntervalEXT(display, window, 0);
     }
 
     return window_context;

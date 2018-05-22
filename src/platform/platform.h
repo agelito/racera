@@ -46,6 +46,9 @@ platform_set_working_directory(char* directory);
 void
 platform_sleep(int milliseconds);
 
+uint64
+platform_time();
+
 read_file
 platform_read_file(char* path, int append_null);
 
@@ -69,5 +72,8 @@ platform_log(char* format, ...);
 
 long
 platform_format(char* destination, long size, char* format, ...);
+
+void
+platform_copy_string(char* destination, char* source, long max_length);
 
 #endif // PLATFORM_H_INCLUDED

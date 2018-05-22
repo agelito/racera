@@ -7,6 +7,8 @@
 #include "texture.c"
 #include "material.c"
 
+#include "../profiler.h"
+
 #define glUniformScalar(type, u, c, d) GL_CALL(type, u->location, c, (void*)d)
 #define glUniformMatrix(type, u, c, d) GL_CALL(type, u->location, c, GL_FALSE, (void*)d)
 
@@ -108,6 +110,7 @@ renderer_upload_uniform(shader_uniform* uniform, int count, unsigned char* data)
 void
 renderer_apply_uniforms(shader_program* shader, shader_uniform_group* group)
 {
+    PROFILER_BEGIN("apply uniforms");
     shader_reflection* info = &shader->info;
 
     int uniform_slot;
@@ -120,6 +123,7 @@ renderer_apply_uniforms(shader_program* shader, shader_uniform_group* group)
 	int count = data.size / uniform->size_per_element;
 	renderer_upload_uniform(uniform, count, data.data);
     }
+    PROFILER_END();
 }
 
 static input_layout*
@@ -384,6 +388,8 @@ configure_for_transparency(bool32 transparency_enabled)
 void
 renderer_queue_process(render_queue* queue)
 {
+    PROFILER_FUNC();
+    
     loaded_mesh* bound_mesh = 0;
     material* bound_material = 0;
 
@@ -422,6 +428,7 @@ renderer_queue_process(render_queue* queue)
 
 	} break;
 	case render_queue_type_draw: {
+	    PROFILER_BEGIN("draw");
 	    render_queue_draw* draw =
 		(render_queue_draw*)(queue_head + sizeof(render_queue_item));
 
@@ -473,6 +480,7 @@ renderer_queue_process(render_queue* queue)
 		glDrawElements(GL_TRIANGLES, draw->draw_element_count,
 			       GL_UNSIGNED_INT, (void*)0);
 	    }
+	    PROFILER_END();
 	} break;
 	case render_queue_type_target:
 	{
@@ -497,6 +505,7 @@ renderer_queue_process(render_queue* queue)
 
 	queue_processed += (sizeof(render_queue_item) + item->command_size);
     }
+    PROFILER_END();
 }
 
 void

@@ -3,6 +3,7 @@
 
 #include "math.h"
 #include "font.h"
+#include "profiler.h"
 #include "text_renderer.h"
 #include "rendering/renderer.h"
 
@@ -49,6 +50,7 @@ struct game_state
     loaded_texture checker;
 
     loaded_font deja_vu;
+    loaded_font deja_vu_mono;
 
     material cup_material;
     material text_background;
@@ -64,6 +66,8 @@ struct game_state
     vector3 created_cube_positions[MAX_CUBES];
 
     render_target scene_target;
+
+    profiler_frame frame_stats;
 };
 
 void

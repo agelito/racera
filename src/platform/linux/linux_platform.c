@@ -166,6 +166,12 @@ platform_copy_memory(void* destination, void* source, long size)
 }
 
 void
+platform_copy_string(char* destination, char* source, long max_length)
+{
+    strncpy(destination, source, max_length);
+}
+
+void
 platform_log(char* format, ...)
 {
     va_list args;

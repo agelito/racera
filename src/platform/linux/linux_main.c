@@ -32,6 +32,7 @@
 #include "linux_keyboard.c"
 #include "linux_window.c"
 #include "linux_opengl.c"
+#include "linux_time.c"
 
 #include "../../racera.h"
 
@@ -55,11 +56,15 @@ int main(int argc, char* argv[])
     
     exe_dir_length = platform_executable_directory(exe_dir, exe_dir_length);
     platform_set_working_directory(exe_dir);
-    
-    window_x11 window_context = create_window(1280, 720, "racera");
 
+    PROFILER_BEGIN("create window");
+    window_x11 window_context = create_window(1280, 720, "racera");
+    PROFILER_END();
+
+    PROFILER_BEGIN("input init");
     keyboard_x11 keyboard = keyboard_x11_init(window_context.display);
     xinput2 mouse_raw = xinput2_init(window_context.display);
+    PROFILER_END();
 
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
@@ -71,6 +76,11 @@ int main(int argc, char* argv[])
 
     while(handle_window_events(&window_context, &keyboard, &mouse_raw))
     {
+	racera_state.frame_stats = profiler_process_frame();
+
+	PROFILER_BEGIN("platform loop");
+
+	PROFILER_BEGIN("update timer");
 	uint64 current_time = get_precise_time();
 	uint64 delta_time = (current_time - previous_time);
 	previous_time = current_time;
@@ -78,10 +88,12 @@ int main(int argc, char* argv[])
 
 	racera_state.time_wall = (real32)(elapsed_time * 0.000001f);
 	racera_state.time_frame = (real32)(delta_time * 0.000001f);
+	PROFILER_END();
 	
 	racera_state.screen_width = window_context.width;
 	racera_state.screen_height = window_context.height;
 
+	PROFILER_BEGIN("input");
 	int key;
 	for(key = 0; key < VKEY_COUNT; key++)
 	{
@@ -93,6 +105,7 @@ int main(int argc, char* argv[])
 	xinput2_mouse mouse_axis = xinput2_get_default_axis(&mouse_raw);
 	mouse_apply_relative(&racera_state.mouse, mouse_axis.x, mouse_axis.y, mouse_axis.wheel);
 	mouse_clamp_to_window(&racera_state.mouse, window_context.width, window_context.height);
+	PROFILER_END();
 	
 	game_update_and_render(&racera_state);
 	if(racera_state.should_quit)
@@ -101,12 +114,16 @@ int main(int argc, char* argv[])
 	    break;
 	}
 
+	PROFILER_BEGIN("redraw");
 	redraw_window(&window_context);
+	PROFILER_END();
 
+	PROFILER_BEGIN("input reset");
 	keyboard_x11_reset(&keyboard);
 	xinput2_reset_axis_data(&mouse_raw);
-	
-	platform_sleep(1);
+	PROFILER_END();
+
+	PROFILER_END();
     }
 
     return 0;

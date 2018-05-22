@@ -16,15 +16,23 @@
 #include "input/keyboard.c"
 #include "input/mouse.c"
 
+#include "profiler.h"
+
 static void
 game_initialize(game_state* state)
 {
+    PROFILER_BEGIN("initialize");
+    PROFILER_BEGIN("opengl initialize");
     opengl_initialize();
+    PROFILER_END();
 
-    state->render_queue = renderer_queue_create(KB(64));
-    state->text_renderer = text_renderer_create(KB(64), KB(4));
+    PROFILER_BEGIN("create renderer");
+    state->render_queue = renderer_queue_create(KB(16));
+    state->text_renderer = text_renderer_create(KB(16), KB(4));
+    PROFILER_END();
 
     { // NOTE: Load shaders
+	PROFILER_BEGIN("load shaders");
 	platform_log("load shaders\n");
 	
 	char* vertex_shader = "shaders/simple.vert";
@@ -42,9 +50,12 @@ game_initialize(game_state* state)
 	    load_shader(vertex_shader, "shaders/texcoords_visualize.frag", 0);
 	state->postfx_test =
 	    load_shader(vertex_shader, "shaders/postfx_test.frag", 0);
+
+	PROFILER_END();
     }
 
     { // NOTE: Load Meshes
+	PROFILER_BEGIN("load meshes");
 	platform_log("load meshes\n");
 
 	state->cube = load_mesh(mesh_create_cube(1.0f), 0);
@@ -55,22 +66,29 @@ game_initialize(game_state* state)
 
 	state->quad = load_mesh(mesh_create_quad(), 0);
 	mesh_data_free(&state->quad.data);
+	PROFILER_END();
     }
 
     { // NOTE: Load Textures
+	PROFILER_BEGIN("load textures");
 	platform_log("load textures\n");
 	
 	state->checker = load_texture(texture_create_checker(256, 256, 64), 1);
 	texture_data_free(&state->checker.data);
+	PROFILER_END();
     }
 
     { // NOTE: Load Fonts
+	PROFILER_BEGIN("load fonts");
 	platform_log("load fonts\n");
 	
 	state->deja_vu = load_font(font_create_from_file("fonts/DejaVu.fnt"));
+	state->deja_vu_mono = load_font(font_create_from_file("fonts/DejaVu_Mono.fnt"));
+	PROFILER_END();
     }
 
     { // NOTE: Load Materials
+	PROFILER_BEGIN("load materials");
 	platform_log("load materials\n");
 
 	state->cup_material = material_create(&state->visualize_normals, KB(1));
@@ -80,14 +98,17 @@ game_initialize(game_state* state)
 			   vector4_create(0.0f, 0.0f, 0.0f, 0.75f));
 
 	state->postfx = material_create(&state->postfx_test, KB(1));
+	PROFILER_END();
     }
 
     { // NOTE: Load terrain
+	PROFILER_BEGIN("load terrain");
 	platform_log("load terrain\n");
 	
 	texture_data heightmap_texture = texture_create_from_tga("heightmaps/heightmap.tga");
 	state->terrain = terrain_create(4096.0f, 4096.0f, 400.0f, 1024.0f, 1024.0f, heightmap_texture);
 	texture_data_free(&heightmap_texture);
+	PROFILER_END();
     }
     
     state->camera_position = (vector3){{{-10.2f, 13.5f, -10.2f}}};
@@ -98,6 +119,8 @@ game_initialize(game_state* state)
     platform_log("rt: %d %d\n", state->screen_width, state->screen_height);
 	
     state->initialized = 1;
+    
+    PROFILER_END();
 }
 
 static void
@@ -142,10 +165,15 @@ control_camera(game_state* state)
 void
 game_update_and_render(game_state* state)
 {
+    profiler_frame* frame_stats = &state->frame_stats;
+    
+    PROFILER_BEGIN("game update & render");
     if(!state->initialized)
     {
 	game_initialize(state);
     }
+
+    PROFILER_BEGIN("game update");
 
     renderer_queue_set_render_size(&state->render_queue, state->screen_width, state->screen_height);
 
@@ -176,6 +204,9 @@ game_update_and_render(game_state* state)
 	state->created_cube_count -= 1;
     }
 
+    PROFILER_END();
+    PROFILER_BEGIN("render scene");
+
     float right = (float)state->screen_width * 0.5f;
     float top = (float)state->screen_height * 0.5f;
     matrix4 projection = matrix_perspective(80.0f, right / top, 0.1f, 2000.0f);
@@ -205,6 +236,8 @@ game_update_and_render(game_state* state)
 	renderer_queue_process(&state->render_queue);
 	renderer_queue_clear(&state->render_queue);
     }
+    PROFILER_END();
+    PROFILER_BEGIN("render ui");
 
     renderer_queue_push_target(&state->render_queue, 0);
 
@@ -230,23 +263,45 @@ game_update_and_render(game_state* state)
 	renderer_queue_push_draw(&state->render_queue, &state->quad,
 				 &state->postfx, fullscreen_quad);
 	
-	char timings_text[256];
-	platform_format(timings_text, 256, "frame time: %f", state->time_frame);
 
 	vector2 text_position = vector2_create((real32)state->screen_width * -0.48f,
 						(real32)state->screen_height * 0.45f);
-	ui_draw_label(state, text_position, timings_text, 26.0f, 10.0f, &state->deja_vu);
 
-	text_position.y -= 32.0f;
-	
+	char stats_text[256];
+	platform_format(stats_text, 256,
+			"[Profiler] dt: %.4f fps: %.2f frame: %-5d index: %-3d entries: %-4d\n",
+			frame_stats->frame_delta, frame_stats->frames_per_second,
+			frame_stats->frame_count, frame_stats->frame_index, frame_stats->entry_count);
+	ui_draw_label(state, text_position, stats_text, 14.0f, 10.0f, &state->deja_vu_mono);
+	text_position.y -= 22.0f;
+
+	uint32 entry_index;
+	for(entry_index = 0; entry_index < frame_stats->entry_count; ++entry_index)
+	{
+	    profiler_entry* entry = (frame_stats->entries + entry_index);
+
+	    char label[256];
+	    platform_format(label, 256, "[%s:%d]", entry->file, entry->line);
+	    
+	    char entry_text[256];
+	    platform_format(entry_text, 256,
+			    "%-40s %-30s avg %-10llu min %-10llu max %-10llu cnt %10d\n",
+			    label, entry->label, entry->avg, entry->min, entry->max, entry->cnt);
+
+	    ui_draw_label(state, text_position, entry_text, 14.0f, 10.0f, &state->deja_vu_mono);
+
+	    text_position.y -= 22.0f;
+	}
+
+	text_position.y -= 10.0f;
+
 	char camera_text[256];
 	platform_format(camera_text, 256, "camera p: %.2f %.2f %.2f\ncamera r: %.2f %.2f",
 			state->camera_position.x, state->camera_position.y, state->camera_position.z,
 			state->camera_pitch_yaw_roll.x, state->camera_pitch_yaw_roll.y);
-	ui_draw_label(state, text_position, camera_text, 26.0f, 10.0f, &state->deja_vu);
+	ui_draw_label(state, text_position, camera_text, 18.0f, 10.0f, &state->deja_vu_mono);
 
-
-	text_position.y -= 52.0f;
+	text_position.y -= 34.0f;
 
 	text_renderer_prepare(&state->text_renderer);
 	text_renderer_draw(&state->text_renderer, &state->render_queue);
@@ -255,5 +310,8 @@ game_update_and_render(game_state* state)
 	renderer_queue_process(&state->render_queue);
 	renderer_queue_clear(&state->render_queue);
     }
+    PROFILER_END();
+
+    PROFILER_END();
 }
 

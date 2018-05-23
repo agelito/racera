@@ -74,6 +74,8 @@ int main(int argc, char* argv[])
     uint64 elapsed_time = 0;
     uint64 previous_time = get_precise_time();
 
+    bool32 profiler_paused = 0;
+
     while(handle_window_events(&window_context, &keyboard, &mouse_raw))
     {
 	racera_state.frame_stats = profiler_process_frame();
@@ -106,7 +108,13 @@ int main(int argc, char* argv[])
 	mouse_apply_relative(&racera_state.mouse, mouse_axis.x, mouse_axis.y, mouse_axis.wheel);
 	mouse_clamp_to_window(&racera_state.mouse, window_context.width, window_context.height);
 	PROFILER_END();
-	
+
+	if(keyboard_is_released(&racera_state.keyboard, VKEY_P))
+	{
+	    profiler_paused = !profiler_paused;
+	    profiler_set_paused(profiler_paused);
+	}
+
 	game_update_and_render(&racera_state);
 	if(racera_state.should_quit)
 	{

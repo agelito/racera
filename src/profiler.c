@@ -20,6 +20,7 @@ struct profiler_sample
     int32			line;
     uint64			timestamp_begin;
     uint64			timestamp_end;
+    uint64                      frame_number;
     char			label[64];
     profiler_sample_list*	list;
     profiler_sample*		next;
@@ -38,6 +39,7 @@ typedef struct profiler_state {
 
     uint32 sample_max;
     uint32 sample_read;
+    uint32 sample_prev_read;
     uint32 sample_write;
     profiler_sample* samples;
 
@@ -47,7 +49,10 @@ typedef struct profiler_state {
     uint64 frame_timestamp;
     uint32 frame_index;
     uint64 frame_count;
+    uint64 frame_count_real;
     profiler_entry* frame_data;
+
+    bool32 paused;
 
     uint64 profiler_memory_overhead;
 } profiler_state;
@@ -105,6 +110,8 @@ sample_list_find(profiler_state* state, char* file, int32 line, profiler_sample_
 void
 profiler_init_state()
 {
+    state.paused = 0;
+    
     state.sample_max   = PROFILER_MAX_SAMPLE_COUNT;
     state.sample_write = 0;
     state.sample_read  = 0;
@@ -153,6 +160,8 @@ profiler_record_event(char* label, char* file, char* function, int32 line)
     sample->function = function;
     sample->line     = line;
 
+    sample->frame_number = state.frame_count_real;
+
     uint64 timestamp = platform_time();
     sample->timestamp_begin = timestamp;
     sample->timestamp_end   = timestamp;
@@ -176,6 +185,11 @@ profiler_record_block_begin(char* label, char* file, char* function, int32 line)
 	next_write = 0;
     }
 
+    if(next_write == state.sample_read)
+    {
+	return;
+    }
+
     assert(next_write != state.sample_read);
 
     uint32 sample_index = state.sample_write;
@@ -187,6 +201,8 @@ profiler_record_block_begin(char* label, char* file, char* function, int32 line)
     sample->file     = file;
     sample->function = function;
     sample->line     = line;
+
+    sample->frame_number = state.frame_count_real;
 
     uint64 timestamp = platform_time();
     sample->timestamp_begin = timestamp;
@@ -210,6 +226,12 @@ profiler_record_block_end()
     state.current_sample = sample->parent;
 }
 
+void
+profiler_set_paused(bool32 paused)
+{
+    state.paused = paused;
+}
+
 #define NANOSECOND 1000000000
 
 profiler_frame
@@ -223,41 +245,56 @@ profiler_process_frame()
 
     real32 frame_delta = (real32)((real64)delta / NANOSECOND);
     real32 frames_per_second = (real32)(NANOSECOND / delta);
-    
-    uint32 read = state.sample_read;
-    while(read != state.sample_write)
+
+    if(!state.paused)
     {
-	profiler_sample* sample        = (state.samples + read);
-	profiler_sample* sample_parent = (state.samples + sample->parent);
-
-	profiler_sample_list* parent = sample_parent->list;
-
-	if(list == 0 || list->file != sample->file || list->line != sample->line ||
-	   list->parent != parent)
+	state.frame_count = state.frame_count_real;
+	
+	sample_list_reset(&state);
+	
+    	uint32 read = state.sample_prev_read;
+	while(read != state.sample_write)
 	{
-	    list = sample_list_find(&state, sample->file, sample->line, parent);
+	    profiler_sample* sample        = (state.samples + read);
+	    profiler_sample* sample_parent = (state.samples + sample->parent);
+
+	    profiler_sample_list* parent = sample_parent->list;
+
+	    if(sample->frame_number == state.frame_count)
+	    {
+		if(list == 0 || list->file != sample->file || list->line != sample->line ||
+		   list->parent != parent)
+		{
+		    list = sample_list_find(&state, sample->file, sample->line, parent);
+		}
+
+		if(!list)
+		{
+		    assert(state.sample_list_count < PROFILER_MAX_UNIQUE_SAMPLES);
+		    list		   = (state.sample_list + state.sample_list_count++);
+		    list->file	   = sample->file;
+		    list->line	   = sample->line;
+		    list->first_sample = 0;
+		    list->parent       = parent;
+		}
+
+		sample_list_insert(list, sample);
+		sample->list = list;
+	    }
+
+	    if(++read >= state.sample_max)
+	    {
+		read = 0;
+	    }
 	}
 
-	if(!list)
-	{
-	    assert(state.sample_list_count < PROFILER_MAX_UNIQUE_SAMPLES);
-	    list	       = (state.sample_list + state.sample_list_count++);
-	    list->file	       = sample->file;
-	    list->line	       = sample->line;
-	    list->first_sample = 0;
-	    list->parent       = parent;
-	}
-
-	sample_list_insert(list, sample);
-	sample->list = list;
-
-	if(++read >= state.sample_max)
-	{
-	    read = 0;
-	}
+	state.sample_read = state.sample_prev_read;
+	state.sample_prev_read = read;
+	
+	++state.frame_count;
     }
 
-    state.sample_read = read;
+    ++state.frame_count_real;
 
     uint64 frame_data_offset = state.frame_index * PROFILER_ENTRIES_PER_FRAME;
     
@@ -286,6 +323,7 @@ profiler_process_frame()
 		entry->min	= time;
 		entry->max	= time;
 		entry->avg	= time;
+		entry->frm      = sample->frame_number;
 		entry->cnt	= 1;
 		is_first = 0;
 
@@ -310,23 +348,19 @@ profiler_process_frame()
 
 	    sample = sample->next;
 	}
-
-	list->first_sample = 0;
     }
-    
-    sample_list_reset(&state);
 
     profiler_frame frame = (profiler_frame){0};
-    frame.frame_count = state.frame_count;
-    frame.frame_index = state.frame_index;
+    
+    frame.frame_count	   = state.frame_count;
+    frame.frame_count_real = state.frame_count_real;
+    frame.frame_index	   = state.frame_index;
 
     frame.entry_count = entry_count;
     frame.entries = (state.frame_data + frame_data_offset);
 
     frame.frame_delta = frame_delta;
     frame.frames_per_second = frames_per_second;
-
-    ++state.frame_count;
     
     state.frame_index = (state.frame_count % PROFILER_MAX_FRAMES);
 

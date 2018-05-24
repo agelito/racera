@@ -60,7 +60,7 @@ typedef struct profiler_state {
 // TODO: One state per thread, so the threads doesn't
 // have to synchronize when adding samples. Preparing
 // samples would still require synchronizing.
-static profiler_state state = (profiler_state){0};
+static profiler_state state;
 
 internal void
 sample_list_insert(profiler_sample_list* list, profiler_sample* sample)

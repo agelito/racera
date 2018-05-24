@@ -19,10 +19,6 @@
 #include <X11/keysym.h>
 #include <X11/extensions/XInput2.h>
 
-#define unused_arg(arg) (void)arg;
-#define array_count(array) (sizeof(array) / sizeof(array[0]))
-#define invalid_code *(int*)0 = 0
-
 #include "../platform.h"
 
 #include "linux_platform.c"

@@ -29,6 +29,10 @@ typedef double real64;
 #define MB(mega_bytes) (KB(mega_bytes) * 1024)
 #define GB(giga_bytes) (MB(giga_bytes) * 1024)
 
+#define unused_arg(arg) (void)arg;
+#define array_count(array) (sizeof(array) / sizeof(array[0]))
+#define invalid_code *(int*)0 = 0
+
 typedef struct read_file read_file;
 
 struct read_file

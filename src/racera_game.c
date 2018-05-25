@@ -269,10 +269,11 @@ game_update_and_render(game_state* state)
 
 	char stats_text[256];
 	platform_format(stats_text, 256,
-			"[Profiler] dt: %.4f fps: %.2f frame: %-5d (%-5d) index: %-3d entries: %-4d\n",
+			"[Profiler] dt: %.4f fps: %.2f frame: %-5d (%-5d) index: %-3d entries: %-4d memory: %.02f MB\n",
 			frame_stats->frame_delta, frame_stats->frames_per_second,
 			frame_stats->frame_count, frame_stats->frame_count_real,
-			frame_stats->frame_index, frame_stats->entry_count);
+			frame_stats->frame_index, frame_stats->entry_count,
+			(float)frame_stats->memory_overhead / 1024 / 1024);
 	ui_draw_label(state, text_position, stats_text, 14.0f, 10.0f, &state->deja_vu_mono);
 	text_position.y -= 22.0f;
 

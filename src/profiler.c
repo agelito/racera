@@ -5,16 +5,20 @@
 #include <stdlib.h>
 
 #define PROFILER_MAX_SAMPLE_COUNT   20000
+#define PROFILER_SAMPLES_PER_BLOCK  1024
 #define PROFILER_MAX_UNIQUE_SAMPLES 2000
 #define PROFILER_MAX_FRAMES         120
 #define PROFILER_ENTRIES_PER_FRAME  5000
 
+#define NANOSECOND 1000000000
+
 typedef struct profiler_sample profiler_sample;
+typedef struct profiler_sample_block profiler_sample_block;
 typedef struct profiler_sample_list profiler_sample_list;
 
 struct profiler_sample
 {
-    uint32			parent;
+    profiler_sample*		parent;
     char*			file;
     char*			function;
     int32			line;
@@ -26,23 +30,28 @@ struct profiler_sample
     profiler_sample*		next;
 };
 
-typedef struct profiler_sample_list {
+struct profiler_sample_block
+{
+    uint32			sample_count;
+    profiler_sample		samples[PROFILER_SAMPLES_PER_BLOCK];
+    profiler_sample_block*	next;
+};
+
+struct profiler_sample_list
+{
     char* file;
     int32 line;
 
     profiler_sample_list*	parent;
     profiler_sample*		first_sample;
-} profiler_sample_list;
+};
 
 typedef struct profiler_state {
-    uint32 current_sample;
+    profiler_sample* current_sample;
 
-    uint32 sample_max;
-    uint32 sample_read;
-    uint32 sample_prev_read;
-    uint32 sample_write;
-    profiler_sample* samples;
-
+    profiler_sample_block* blocks;
+    profiler_sample_block* free_blocks;
+    
     uint32 sample_list_count;
     profiler_sample_list* sample_list;
 
@@ -111,13 +120,6 @@ void
 profiler_init_state()
 {
     state.paused = 0;
-    
-    state.sample_max   = PROFILER_MAX_SAMPLE_COUNT;
-    state.sample_write = 0;
-    state.sample_read  = 0;
-
-    uint64 samples_size = sizeof(profiler_sample) * PROFILER_MAX_SAMPLE_COUNT;
-    state.samples = (profiler_sample*)malloc(samples_size);
 
     uint64 sample_list_size = sizeof(profiler_sample_list) * PROFILER_MAX_UNIQUE_SAMPLES;
     state.sample_list = (profiler_sample_list*)malloc(sample_list_size);
@@ -128,32 +130,48 @@ profiler_init_state()
 	sizeof(profiler_entry) * PROFILER_MAX_FRAMES * PROFILER_ENTRIES_PER_FRAME;
     state.frame_data = (profiler_entry*)malloc(frame_data_size);
 
-    state.profiler_memory_overhead =
-	(samples_size + sample_list_size + frame_data_size + sizeof(profiler_state));
-
+    state.profiler_memory_overhead = (sample_list_size + frame_data_size + sizeof(profiler_state));
     platform_log("profiler memory: %.02f MB\n", (float)state.profiler_memory_overhead / 1024 / 1024);
+}
+
+internal profiler_sample*
+profiler_insert_sample(profiler_state* profiler)
+{
+    profiler_sample_block* sample_block = profiler->blocks;
+    if(!sample_block || sample_block->sample_count >= PROFILER_SAMPLES_PER_BLOCK)
+    {
+	profiler_sample_block* new_block = 0;
+	if(profiler->free_blocks)
+	{
+	    new_block = profiler->free_blocks;
+	    profiler->free_blocks = new_block->next;
+	}
+	else
+	{
+	    new_block = (profiler_sample_block*)malloc(sizeof(profiler_sample_block));
+	    profiler->profiler_memory_overhead += sizeof(profiler_sample_block);
+	}
+
+	
+	new_block->sample_count = 0;
+	new_block->next		= sample_block;
+	
+	sample_block	 = new_block;
+	profiler->blocks = sample_block;
+    }
+
+    return (sample_block->samples + sample_block->sample_count++);
 }
 
 void
 profiler_record_event(char* label, char* file, char* function, int32 line)
 {
-    if(state.sample_max == 0)
+    if(state.sample_list == 0)
     {
 	profiler_init_state();
     }
-
-    uint32 next_write = state.sample_write + 1;
-    if(next_write >= state.sample_max)
-    {
-	next_write = 0;
-    }
-
-    assert(next_write != state.sample_read);
-
-    uint32 sample_index = state.sample_write;
-    state.sample_write = next_write;
     
-    profiler_sample* sample = (state.samples + sample_index);
+    profiler_sample* sample = profiler_insert_sample(&state);
     sample->parent = state.current_sample;
     
     sample->file     = file;
@@ -174,28 +192,12 @@ profiler_record_event(char* label, char* file, char* function, int32 line)
 void
 profiler_record_block_begin(char* label, char* file, char* function, int32 line)
 {
-    if(state.sample_max == 0)
+    if(state.sample_list == 0)
     {
 	profiler_init_state();
     }
-    
-    uint32 next_write = state.sample_write + 1;
-    if(next_write >= state.sample_max)
-    {
-	next_write = 0;
-    }
 
-    if(next_write == state.sample_read)
-    {
-	return;
-    }
-
-    assert(next_write != state.sample_read);
-
-    uint32 sample_index = state.sample_write;
-    state.sample_write = next_write;
-
-    profiler_sample* sample = (state.samples + sample_index);
+    profiler_sample* sample = profiler_insert_sample(&state);
     sample->parent = state.current_sample;
     
     sample->file     = file;
@@ -210,15 +212,14 @@ profiler_record_block_begin(char* label, char* file, char* function, int32 line)
 
     platform_copy_string(sample->label, label, array_count(sample->label));
 
-    state.current_sample = sample_index;
+    state.current_sample = sample;
 }
 
 void
 profiler_record_block_end()
 {
-    assert(state.sample_max > 0);
-    
-    profiler_sample* sample = (state.samples + state.current_sample);
+    profiler_sample* sample = state.current_sample;
+    assert(sample != 0);
 
     uint64 timestamp = platform_time();
     sample->timestamp_end = timestamp;
@@ -231,8 +232,6 @@ profiler_set_paused(bool32 paused)
 {
     state.paused = paused;
 }
-
-#define NANOSECOND 1000000000
 
 profiler_frame
 profiler_process_frame()
@@ -251,45 +250,53 @@ profiler_process_frame()
 	state.frame_count = state.frame_count_real;
 	
 	sample_list_reset(&state);
-	
-    	uint32 read = state.sample_prev_read;
-	while(read != state.sample_write)
+
+	profiler_sample_block* block = state.blocks;
+	while(block)
 	{
-	    profiler_sample* sample        = (state.samples + read);
-	    profiler_sample* sample_parent = (state.samples + sample->parent);
-
-	    profiler_sample_list* parent = sample_parent->list;
-
-	    if(sample->frame_number == state.frame_count)
+	    int sample_count = block->sample_count;
+	    for(int i = 0; i < sample_count; ++i)
 	    {
-		if(list == 0 || list->file != sample->file || list->line != sample->line ||
-		   list->parent != parent)
+		profiler_sample* sample        = (block->samples + i);
+		profiler_sample* sample_parent = sample->parent;
+
+		profiler_sample_list* parent = 0;
+		if(sample_parent != 0)
 		{
-		    list = sample_list_find(&state, sample->file, sample->line, parent);
+		    parent = sample_parent->list;
 		}
 
-		if(!list)
+		if(sample->frame_number == state.frame_count)
 		{
-		    assert(state.sample_list_count < PROFILER_MAX_UNIQUE_SAMPLES);
-		    list		   = (state.sample_list + state.sample_list_count++);
-		    list->file	   = sample->file;
-		    list->line	   = sample->line;
-		    list->first_sample = 0;
-		    list->parent       = parent;
+		    if(list == 0 || list->file != sample->file || list->line != sample->line ||
+		       list->parent != parent)
+		    {
+			list = sample_list_find(&state, sample->file, sample->line, parent);
+		    }
+
+		    if(!list)
+		    {
+			assert(state.sample_list_count < PROFILER_MAX_UNIQUE_SAMPLES);
+			list		   = (state.sample_list + state.sample_list_count++);
+			list->file	   = sample->file;
+			list->line	   = sample->line;
+			list->first_sample = 0;
+			list->parent       = parent;
+		    }
+
+		    sample_list_insert(list, sample);
+		    sample->list = list;
 		}
-
-		sample_list_insert(list, sample);
-		sample->list = list;
 	    }
 
-	    if(++read >= state.sample_max)
-	    {
-		read = 0;
-	    }
+	    profiler_sample_block* next = block->next;
+	    block->next = state.free_blocks;
+	    state.free_blocks = block;
+
+	    block = next;
 	}
 
-	state.sample_read = state.sample_prev_read;
-	state.sample_prev_read = read;
+	state.blocks = 0;
 	
 	++state.frame_count;
     }
@@ -355,6 +362,8 @@ profiler_process_frame()
     frame.frame_count	   = state.frame_count;
     frame.frame_count_real = state.frame_count_real;
     frame.frame_index	   = state.frame_index;
+
+    frame.memory_overhead = state.profiler_memory_overhead;
 
     frame.entry_count = entry_count;
     frame.entries = (state.frame_data + frame_data_offset);

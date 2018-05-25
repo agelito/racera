@@ -21,13 +21,15 @@ typedef struct profiler_entry {
     uint64 frm;
     uint32 cnt;
     real32 prc;
+
 } profiler_entry;
 
 typedef struct profiler_frame {
     real32              frame_delta;
     real32              frames_per_second;
     uint64              frame_count;
-    uint64              frame_count_real;
+    uint64		frame_count_real;
+    uint64		memory_overhead;
     uint32		frame_index;
     uint32		entry_count;
     profiler_entry*	entries;

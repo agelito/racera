@@ -27,6 +27,7 @@ struct profiler_sample
     char			label[64];
     profiler_sample_list*	list;
     profiler_sample*		next;
+    uint64                      overhead;
 };
 
 struct profiler_sample_block
@@ -176,6 +177,8 @@ profiler_insert_sample(profiler_state* profiler)
 void
 profiler_record_event(char* label, char* file, char* function, int32 line)
 {
+    uint64 timestamp = platform_time();
+    
     if(state.sample_list == 0)
     {
 	profiler_init_state();
@@ -190,18 +193,21 @@ profiler_record_event(char* label, char* file, char* function, int32 line)
 
     sample->frame_count = state.frame_count;
 
-    uint64 timestamp = platform_time();
     sample->timestamp_begin = timestamp;
     sample->timestamp_end   = timestamp;
 
     sample->next = 0;
 
     platform_copy_string(sample->label, label, array_count(sample->label));
+
+    sample->overhead = platform_time() - timestamp;
 }
 
 void
 profiler_record_block_begin(char* label, char* file, char* function, int32 line)
 {
+    uint64 timestamp = platform_time();
+    
     if(state.sample_list == 0)
     {
 	profiler_init_state();
@@ -216,33 +222,38 @@ profiler_record_block_begin(char* label, char* file, char* function, int32 line)
 
     sample->frame_count = state.frame_count;
 
-    uint64 timestamp = platform_time();
     sample->timestamp_begin = timestamp;
     sample->timestamp_end   = 0;
 
     platform_copy_string(sample->label, label, array_count(sample->label));
 
     state.current_sample = sample;
+
+    sample->overhead = platform_time() - timestamp;
 }
 
 void
 profiler_record_block_end()
 {
+    uint64 timestamp = platform_time();
+    
     profiler_sample* sample = state.current_sample;
     assert(sample != 0);
 
-    uint64 timestamp = platform_time();
     sample->timestamp_end = timestamp;
 
     state.current_sample = sample->parent;
+
+    sample->overhead = platform_time() - timestamp;
 }
 
 profiler_frame*
 profiler_process_frame()
 {
-    profiler_sample_list* list = 0;
-
     uint64 timestamp = platform_time();
+    
+    profiler_sample_list* list = 0;
+    
     uint32 delta = (uint32)(timestamp - state.frame_timestamp);
     state.frame_timestamp = timestamp;
 
@@ -302,6 +313,8 @@ profiler_process_frame()
 
     state.blocks = 0;
 
+    uint64 total_sample_overhead = 0;
+
     profiler_frame* frame = (state.frames + state.frame_index);
     
     uint32 entry_count = 0;
@@ -356,6 +369,8 @@ profiler_process_frame()
 		++entry->cnt;
 	    }
 
+	    total_sample_overhead += sample->overhead;
+
 	    sample = sample->next;
 	}
 
@@ -386,6 +401,10 @@ profiler_process_frame()
 
     state.frame_count += 1;
     state.frame_index = (state.frame_count % PROFILER_MAX_FRAMES);
+
+    uint64 overhead = total_sample_overhead + (platform_time() - timestamp);
+    frame->time_overhead = overhead;
+    frame->time_overhead_percent = (real32)overhead / delta;
 
     return frame;
 }

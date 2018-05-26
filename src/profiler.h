@@ -34,6 +34,8 @@ typedef struct profiler_frame {
     uint64              frame_count;
     uint32		frame_index;
     uint64		memory_overhead;
+    uint64              time_overhead;
+    real32              time_overhead_percent;
 } profiler_frame;
 
 void

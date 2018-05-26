@@ -165,7 +165,7 @@ control_camera(game_state* state)
 void
 game_update_and_render(game_state* state)
 {
-    profiler_frame* frame_stats = &state->frame_stats;
+    profiler_frame* frame_stats = state->frame_stats;
     
     PROFILER_BEGIN("game update & render");
     if(!state->initialized)
@@ -269,10 +269,9 @@ game_update_and_render(game_state* state)
 
 	char stats_text[256];
 	platform_format(stats_text, 256,
-			"[Profiler] dt: %.4f fps: %.2f frame: %-5d (%-5d) index: %-3d entries: %-4d memory: %.02f MB\n",
+			"[Profiler] dt: %.4f fps: %.2f frame: %-5d index: %-3d entries: %-4d memory: %.02f MB\n",
 			frame_stats->frame_delta, frame_stats->frames_per_second,
-			frame_stats->frame_count, frame_stats->frame_count_real,
-			frame_stats->frame_index, frame_stats->entry_count,
+			frame_stats->frame_count, frame_stats->frame_index, frame_stats->entry_count,
 			(float)frame_stats->memory_overhead / 1024 / 1024);
 	ui_draw_label(state, text_position, stats_text, 14.0f, 10.0f, &state->deja_vu_mono);
 	text_position.y -= 22.0f;
@@ -287,8 +286,9 @@ game_update_and_render(game_state* state)
 	    
 	    char entry_text[256];
 	    platform_format(entry_text, 256,
-			    "%-40s %-30s avg %-10llu min %-10llu max %-10llu cnt %10d\n",
-			    label, entry->label, entry->avg, entry->min, entry->max, entry->cnt);
+			    "%-40s %-30s avg %-10llu min %-10llu max %-10llu tot %-10llu cnt %10d prc %05.02f%% prt %05.02f%%\n",
+			    label, entry->label, entry->avg, entry->min, entry->max,
+			    entry->tot, entry->cnt, entry->prc * 100.0f, entry->prt * 100.0f);
 
 	    ui_draw_label(state, text_position, entry_text, 14.0f, 10.0f, &state->deja_vu_mono);
 

@@ -258,7 +258,7 @@ profiler_process_frame()
     state.frame_timestamp = timestamp;
 
     real32 frame_delta = (real32)((real64)delta / NANOSECOND);
-    real32 frames_per_second = (real32)(NANOSECOND / delta);
+    real32 frames_per_second = (real32)((real64)NANOSECOND / delta);
 
     sample_list_reset(&state);
 

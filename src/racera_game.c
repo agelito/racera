@@ -267,6 +267,7 @@ game_update_and_render(game_state* state)
 	vector2 text_position = vector2_create((real32)state->screen_width * -0.48f,
 						(real32)state->screen_height * 0.45f);
 
+	PROFILER_BEGIN("draw profiler");
 	char stats_text[256];
 	platform_format(stats_text, 256,
 			"[Profiler] dt: %.4f fps: %.2f frame: %-5d index: %-3d entries: %-4d memory: %.02f MB overhead: %05.02f%%\n",
@@ -280,6 +281,7 @@ game_update_and_render(game_state* state)
 	uint32 entry_index;
 	for(entry_index = 0; entry_index < frame_stats->entry_count; ++entry_index)
 	{
+	    PROFILER_BEGIN("draw profiler entry");
 	    profiler_entry* entry = (frame_stats->entries + entry_index);
 
 	    char label[256];
@@ -294,7 +296,9 @@ game_update_and_render(game_state* state)
 	    ui_draw_label(state, text_position, entry_text, 14.0f, 10.0f, &state->deja_vu_mono);
 
 	    text_position.y -= 22.0f;
+	    PROFILER_END();
 	}
+	PROFILER_END();
 
 	text_position.y -= 10.0f;
 

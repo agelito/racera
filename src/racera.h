@@ -67,6 +67,7 @@ struct game_state
 
     render_target scene_target;
 
+    bool32 display_profiler;
     profiler_frame* frame_stats;
 };
 

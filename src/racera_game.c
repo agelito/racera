@@ -186,6 +186,11 @@ game_update_and_render(game_state* state)
 	platform_log("rt: %d %d\n", state->screen_width, state->screen_height);
     }
 
+    if(keyboard_is_pressed(&state->keyboard, VKEY_P))
+    {
+	state->display_profiler = !state->display_profiler;
+    }
+
     if(keyboard_is_pressed(&state->keyboard, VKEY_ESCAPE))
     {
 	state->should_quit = 1;
@@ -241,8 +246,8 @@ game_update_and_render(game_state* state)
 
     renderer_queue_push_target(&state->render_queue, 0);
 
-    projection = matrix_orthographic((float)state->screen_width,
-				     (float)state->screen_height, 1.0f, 100.0f);
+    projection = matrix_orthographic((real32)state->screen_width,
+				     (real32)state->screen_height, 1.0f, 100.0f);
     renderer_queue_push_projection(&state->render_queue, projection);
 
     vector3 eye = (vector3){{{0.0f, 0.0f, -1.0f}}};
@@ -278,25 +283,28 @@ game_update_and_render(game_state* state)
 	ui_draw_label(state, text_position, stats_text, 14.0f, 10.0f, &state->deja_vu_mono);
 	text_position.y -= 22.0f;
 
-	uint32 entry_index;
-	for(entry_index = 0; entry_index < frame_stats->entry_count; ++entry_index)
+	if(state->display_profiler)
 	{
-	    PROFILER_BEGIN("draw profiler entry");
-	    profiler_entry* entry = (frame_stats->entries + entry_index);
+	    uint32 entry_index;
+	    for(entry_index = 0; entry_index < frame_stats->entry_count; ++entry_index)
+	    {
+		PROFILER_BEGIN("draw profiler entry");
+		profiler_entry* entry = (frame_stats->entries + entry_index);
 
-	    char label[256];
-	    platform_format(label, 256, "[%s:%d]", entry->file, entry->line);
+		char label[256];
+		platform_format(label, 256, "[%s:%d]", entry->file, entry->line);
 	    
-	    char entry_text[256];
-	    platform_format(entry_text, 256,
-			    "%-40s %-30s avg %-10llu min %-10llu max %-10llu tot %-10llu cnt %10d prc %05.02f%% prt %05.02f%%\n",
-			    label, entry->label, entry->avg, entry->min, entry->max,
-			    entry->tot, entry->cnt, entry->prc * 100.0f, entry->prt * 100.0f);
+		char entry_text[256];
+		platform_format(entry_text, 256,
+				"%-40s %-30s avg %-10llu min %-10llu max %-10llu tot %-10llu cnt %10d prc %05.02f%% prt %05.02f%%\n",
+				label, entry->label, entry->avg, entry->min, entry->max,
+				entry->tot, entry->cnt, entry->prc * 100.0f, entry->prt * 100.0f);
 
-	    ui_draw_label(state, text_position, entry_text, 14.0f, 10.0f, &state->deja_vu_mono);
+		ui_draw_label(state, text_position, entry_text, 14.0f, 10.0f, &state->deja_vu_mono);
 
-	    text_position.y -= 22.0f;
-	    PROFILER_END();
+		text_position.y -= 22.0f;
+		PROFILER_END();
+	    }
 	}
 	PROFILER_END();
 

@@ -46,6 +46,7 @@ void material_set_value(material* material, uint32 name_hash, void* value,
 
 void material_set_texture(material* material, char* name, loaded_texture* texture);
 void material_set_color(material* material, char* name, vector4 color);
+void material_set_vector(material* material, char* name, vector4 vector);
 
 void material_apply(material* material, shader_uniform_group* uniforms);
 

@@ -51,6 +51,10 @@ game_initialize(game_state* state)
 	state->postfx_test =
 	    load_shader(vertex_shader, "shaders/postfx_test.frag", 0);
 
+	char* skybox_vertex_shader = "shaders/skybox.vert";
+	state->sky_shader =
+	    load_shader(skybox_vertex_shader, "shaders/texcoords3_visualize.frag", 0);
+
 	PROFILER_END();
     }
 
@@ -64,8 +68,12 @@ game_initialize(game_state* state)
 	state->cup = load_mesh(obj_load_from_file("models/cup.obj"), 0);
 	mesh_data_free(&state->cup.data);
 
-	state->quad = load_mesh(mesh_create_quad(), 0);
+	state->quad = load_mesh(mesh_create_quad(1.0f), 0);
 	mesh_data_free(&state->quad.data);
+
+	mesh_data skybox_data = mesh_create_quad(2.0f);
+	state->skybox = load_mesh(skybox_data, 0);
+	mesh_data_free(&skybox_data);
 	PROFILER_END();
     }
 
@@ -98,6 +106,8 @@ game_initialize(game_state* state)
 			   vector4_create(0.0f, 0.0f, 0.0f, 0.75f));
 
 	state->postfx = material_create(&state->postfx_test, KB(1));
+
+	state->sky_material = material_create(&state->sky_shader, KB(1));
 	PROFILER_END();
     }
 
@@ -106,17 +116,16 @@ game_initialize(game_state* state)
 	platform_log("load terrain\n");
 	
 	texture_data heightmap_texture = texture_create_from_tga("heightmaps/heightmap.tga");
-	state->terrain = terrain_create(4096.0f, 4096.0f, 400.0f, 1024.0f, 1024.0f, heightmap_texture);
-	texture_data_free(&heightmap_texture);
+	state->terrain = terrain_create(4096.0f, 4096.0f, 400.0f,
+					1024.0f, 1024.0f, heightmap_texture);
+
 	PROFILER_END();
     }
     
-    state->camera_position = (vector3){{{-10.2f, 13.5f, -10.2f}}};
-    state->camera_pitch_yaw_roll = vector3_create(-31.0f, -55.0f, 0.0f);
+    state->camera_position = (vector3){{{-56.0f, 137.0f, -108.0f}}};
+    state->camera_pitch_yaw_roll = vector3_create(-14.0f, 8.0f, 0.0f);
 
     state->scene_target = render_target_create(state->screen_width, state->screen_height, 1, 1);
-
-    platform_log("rt: %d %d\n", state->screen_width, state->screen_height);
 	
     state->initialized = 1;
     
@@ -136,22 +145,22 @@ control_camera(game_state* state)
     vector3 camera_movement = (vector3){0};
     if(keyboard_is_down(&state->keyboard, VKEY_W))
     {
-	camera_movement.z += 250.0f * state->time_frame;
+	camera_movement.z += 25.0f * state->time_frame;
     }
 
     if(keyboard_is_down(&state->keyboard, VKEY_S))
     {
-	camera_movement.z -= 250.0f * state->time_frame;
+	camera_movement.z -= 25.0f * state->time_frame;
     }
 
     if(keyboard_is_down(&state->keyboard, VKEY_A))
     {
-	camera_movement.x -= 250.0f * state->time_frame;
+	camera_movement.x -= 25.0f * state->time_frame;
     }
 
     if(keyboard_is_down(&state->keyboard, VKEY_D))
     {
-	camera_movement.x += 250.0f * state->time_frame;
+	camera_movement.x += 25.0f * state->time_frame;
     }
 
     matrix4 camera_rotation = matrix_rotation_pitch_yaw(pitch_yaw_roll.x, pitch_yaw_roll.y);
@@ -212,9 +221,9 @@ game_update_and_render(game_state* state)
     PROFILER_END();
     PROFILER_BEGIN("render scene");
 
-    float right = (float)state->screen_width * 0.5f;
-    float top = (float)state->screen_height * 0.5f;
-    matrix4 projection = matrix_perspective(80.0f, right / top, 0.1f, 2000.0f);
+    real32 screen_height = (real32)state->screen_height;
+    real32 screen_width = (real32)state->screen_width;
+    matrix4 projection = matrix_perspective(80.0f, screen_height / screen_width, 0.1f, 2000.0f);
     renderer_queue_push_projection(&state->render_queue, projection);
 
     matrix4 view = matrix_look_fps(state->camera_position, state->camera_pitch_yaw_roll.x,
@@ -225,6 +234,11 @@ game_update_and_render(game_state* state)
 
     renderer_queue_push_clear(&state->render_queue, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT,
 			      (float[4]){0.1f, 0.1f, 0.1f, 1.0f});
+
+    #if 0
+    renderer_queue_push_draw(&state->render_queue, &state->skybox,
+			     &state->sky_material, matrix_identity());
+    #endif
 
     { // NOTE: Draw scene
 	terrain_render(&state->render_queue, &state->terrain);
@@ -241,6 +255,7 @@ game_update_and_render(game_state* state)
 	renderer_queue_process(&state->render_queue);
 	renderer_queue_clear(&state->render_queue);
     }
+    
     PROFILER_END();
     PROFILER_BEGIN("render ui");
 

@@ -30,9 +30,12 @@ load_texture(texture_data data, int mipmap)
     GL_CALLC(glTexParameteri, GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     GLenum texture_format = GL_RGB;
-    if(data.components == 4)
+    switch(data.components)
     {
-	texture_format = GL_RGBA;
+    case 1: texture_format = GL_RED; break;
+    case 2: texture_format = GL_RG; break;
+    case 3: texture_format = GL_RGB; break;
+    case 4: texture_format = GL_RGBA; break;
     }
 
     GL_CALLC(glTexImage2D, GL_TEXTURE_2D, 0, texture_format, data.width, data.height,
@@ -77,8 +80,6 @@ load_texture_depth(int width, int height)
 void
 unload_texture(loaded_texture* texture)
 {
-    texture_data_free(&texture->data);
-    
     if(texture->handle)
     {
 	GL_CALLC(glDeleteTextures, 1, &texture->handle);

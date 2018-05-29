@@ -242,13 +242,13 @@ update_mesh(loaded_mesh* mesh, uint32 offset, uint32 count)
 }
 
 mesh_data
-mesh_create_quad()
+mesh_create_quad(float size)
 {
     mesh_data data = (mesh_data){0};
     data.vertex_count = 4;
     data.index_count = 6;
 
-    real32 half_side = 0.5f;
+    real32 half_side = size * 0.5f;
 
     size_t position_data_size = (data.vertex_count * sizeof(vector3));
     vector3* positions = (vector3*)malloc(position_data_size);
@@ -414,6 +414,11 @@ mesh_create_cube(float side)
     size_t texcoord_data_size = (sizeof(vector2) * data.vertex_count);
     vector2* texcoords = (vector2*)malloc(texcoord_data_size);
     data.vertices.texcoords = texcoords;
+
+    size_t triangle_data_size = (sizeof(uint32) * data.vertex_count);
+    uint32* triangles = (uint32*)malloc(triangle_data_size);
+    data.triangles = triangles;
+    data.index_count = data.vertex_count;
     
     memset(positions, 0, position_data_size);
 
@@ -461,6 +466,13 @@ mesh_create_cube(float side)
     *(texcoords + vertex_index+4) = *(uv_quad + 2);
     *(texcoords + vertex_index+5) = *(uv_quad + 3);
 
+    *(triangles + vertex_index+0) = vertex_index + 0;
+    *(triangles + vertex_index+1) = vertex_index + 1;
+    *(triangles + vertex_index+2) = vertex_index + 2;
+    *(triangles + vertex_index+3) = vertex_index + 3;
+    *(triangles + vertex_index+4) = vertex_index + 4;
+    *(triangles + vertex_index+5) = vertex_index + 5;
+
     vertex_index += 6;
 
     // Left Side
@@ -477,6 +489,13 @@ mesh_create_cube(float side)
     *(texcoords + vertex_index+3) = *(uv_quad + 3);
     *(texcoords + vertex_index+4) = *(uv_quad + 0);
     *(texcoords + vertex_index+5) = *(uv_quad + 1);
+
+    *(triangles + vertex_index+0) = vertex_index + 0;
+    *(triangles + vertex_index+1) = vertex_index + 1;
+    *(triangles + vertex_index+2) = vertex_index + 2;
+    *(triangles + vertex_index+3) = vertex_index + 3;
+    *(triangles + vertex_index+4) = vertex_index + 4;
+    *(triangles + vertex_index+5) = vertex_index + 5;
 
     vertex_index += 6;
     
@@ -495,6 +514,13 @@ mesh_create_cube(float side)
     *(texcoords + vertex_index+4) = *(uv_quad + 2);
     *(texcoords + vertex_index+5) = *(uv_quad + 1);
 
+    *(triangles + vertex_index+0) = vertex_index + 0;
+    *(triangles + vertex_index+1) = vertex_index + 1;
+    *(triangles + vertex_index+2) = vertex_index + 2;
+    *(triangles + vertex_index+3) = vertex_index + 3;
+    *(triangles + vertex_index+4) = vertex_index + 4;
+    *(triangles + vertex_index+5) = vertex_index + 5;
+
     vertex_index += 6;
     
     // Bottom Side
@@ -511,6 +537,13 @@ mesh_create_cube(float side)
     *(texcoords + vertex_index+3) = *(uv_quad + 2);
     *(texcoords + vertex_index+4) = *(uv_quad + 0);
     *(texcoords + vertex_index+5) = *(uv_quad + 3);
+
+    *(triangles + vertex_index+0) = vertex_index + 0;
+    *(triangles + vertex_index+1) = vertex_index + 1;
+    *(triangles + vertex_index+2) = vertex_index + 2;
+    *(triangles + vertex_index+3) = vertex_index + 3;
+    *(triangles + vertex_index+4) = vertex_index + 4;
+    *(triangles + vertex_index+5) = vertex_index + 5;
 
     vertex_index += 6;
 
@@ -529,6 +562,13 @@ mesh_create_cube(float side)
     *(texcoords + vertex_index+4) = *(uv_quad + 1);
     *(texcoords + vertex_index+5) = *(uv_quad + 0);
 
+    *(triangles + vertex_index+0) = vertex_index + 0;
+    *(triangles + vertex_index+1) = vertex_index + 1;
+    *(triangles + vertex_index+2) = vertex_index + 2;
+    *(triangles + vertex_index+3) = vertex_index + 3;
+    *(triangles + vertex_index+4) = vertex_index + 4;
+    *(triangles + vertex_index+5) = vertex_index + 5;
+
     vertex_index += 6;
     
     // Back Side
@@ -545,6 +585,13 @@ mesh_create_cube(float side)
     *(texcoords + vertex_index+3) = *(uv_quad + 2);
     *(texcoords + vertex_index+4) = *(uv_quad + 0);
     *(texcoords + vertex_index+5) = *(uv_quad + 3);
+
+    *(triangles + vertex_index+0) = vertex_index + 0;
+    *(triangles + vertex_index+1) = vertex_index + 1;
+    *(triangles + vertex_index+2) = vertex_index + 2;
+    *(triangles + vertex_index+3) = vertex_index + 3;
+    *(triangles + vertex_index+4) = vertex_index + 4;
+    *(triangles + vertex_index+5) = vertex_index + 5;
 
     vertex_index += 6;
 
@@ -954,3 +1001,22 @@ mesh_generate_normals(mesh_data* data, bool32 from_center)
 }
 
 #undef create_vertex
+
+void
+mesh_reverse_winding(mesh_data* data)
+{
+    if(!data->triangles)
+    {
+	platform_log("[mesh][error] reverse winding only supported for index buffers.\n");
+	return;
+    }
+
+    uint32 i;
+    for(i = 0; i < data->index_count; i += 3)
+    {
+	uint32 second = *(data->triangles + i + 1);
+	uint32* last = (data->triangles + i + 2);
+	*(data->triangles + i + 1) = *last;
+	*last = second;
+    }
+}

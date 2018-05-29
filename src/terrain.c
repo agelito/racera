@@ -15,12 +15,17 @@ terrain_create(float width, float depth, float height_scale, float chunk_width, 
     created_terrain.shader = (shader_program*)malloc(sizeof(shader_program));
     *created_terrain.shader = load_shader("shaders/simple.vert", "shaders/textured.frag", 0);
 
+    created_terrain.generate_detail_texture_shader = (shader_program*)malloc(sizeof(shader_program));
+    *created_terrain.generate_detail_texture_shader =
+	load_shader("shaders/simple.vert", "shaders/generate_terrain_detail.frag", 0);
+
     created_terrain.height_scale = height_scale;
 
     
     created_terrain.heightmap = heightmap_load_from_texture(heightmap_texture,
 							    heightmap_texture.width,
 							    heightmap_texture.height);
+    created_terrain.heightmap_texture = heightmap_texture;
 
     created_terrain.chunk_width = chunk_width;
     created_terrain.chunk_depth = chunk_depth;
@@ -89,7 +94,7 @@ terrain_chunk_setup_detail_texture(render_queue* queue, terrain_chunk* chunk)
 	// middle of any frame. May need to restore the previous
 	// projection and view matrix after the detail texture
 	// has been rendered.
-	
+
 	matrix4 projection = matrix_orthographic((float)1.0f, (float)1.0f, 0.1f, 1.0f);
 	
 	renderer_queue_push_projection(queue, projection);
@@ -103,26 +108,20 @@ terrain_chunk_setup_detail_texture(render_queue* queue, terrain_chunk* chunk)
 	renderer_queue_push_view(queue, view);
 	
 	renderer_queue_push_target(queue, &chunk->setup.target);
-	float clear_color[] = {0.2f, 0.2f, 0.2f, 1.0f};
+	float clear_color[] = {1.0f, 0.0f, 0.0f, 1.0f};
 	renderer_queue_push_clear(queue, GL_COLOR_BUFFER_BIT, clear_color);
 
-	material_set_texture(&chunk->material, "main_texture", &chunk->setup.control);
-	renderer_queue_push_draw(queue, &chunk->setup.quad, &chunk->material, matrix_identity());
+	renderer_queue_push_draw(queue, &chunk->setup.quad, &chunk->setup.material, matrix_identity());
 	renderer_queue_push_target(queue, 0);
 
 	chunk->setup.state = terrain_chunk_setup_finalize;
-
-
     }
     else if(chunk->setup.state == terrain_chunk_setup_finalize)
     {
-	unload_texture(&chunk->setup.control);
 	render_target_destroy(&chunk->setup.target);
-
+	unload_texture(&chunk->setup.heightmap);
+	material_free(&chunk->setup.material);
 	unload_mesh(&chunk->setup.quad);
-	unload_texture(&chunk->setup.control);
-
-	material_set_texture(&chunk->material, "main_texture", &chunk->texture);
 
 	chunk->setup_is_finished = 1;
     }
@@ -150,100 +149,39 @@ terrain_generate_chunk(terrain* terrain,
     chunk.mesh = load_mesh(mesh_data, 0);
     mesh_data_free(&mesh_data);
 
-    texture_data texture = (texture_data){0};
-    texture.width  = 1024;
-    texture.height = 1024;
-
-    uint32 pixel_count = texture.width * texture.height;
-
-    texture.components = 4;
-    texture.colors = (uint8*)malloc(sizeof(uint8) * pixel_count * texture.components);
-
-    uint8* write_pixel = texture.colors;
-    
-    int pixel_y, pixel_x;
-    for(pixel_y = 0; pixel_y < texture.height; ++pixel_y)
-    {
-	for(pixel_x = 0; pixel_x < texture.width; ++pixel_x)
-	{
-	    float u = (float)pixel_x / texture.width;
-	    float v = (float)pixel_y / texture.height;
-
-	    float height = heightmap_sample_rect(&terrain->heightmap, u, v,
-						 heightmap_x, heightmap_y,
-						 heightmap_w, heightmap_h);
-
-	    vector4 color;
-
-	    if(height > 0.75f)
-	    {
-		color = vector4_create(1.0f, 1.0f, 1.0f, 1.0f);
-	    }
-	    else if(height > 0.5f)
-	    {
-		vector4 stone_light = vector4_create(0.66f, 0.66f, 0.66f, 1.0f);
-		vector4 stone_dark = vector4_create(0.5f, 0.5f, 0.5f, 1.0f);
-
-		float stone_t = 1.0f - ((height - 0.5f) / 0.25f);
-		
-		color = vector4_lerp(stone_light, stone_dark, stone_t);
-	    }
-	    else if(height > 0.12f)
-	    {
-		vector4 grass_light = vector4_create(0.15f, 0.95f, 0.2f, 1.0f);
-		vector4 grass_deep = vector4_create(0.25f, 0.85f, 0.4f, 1.0f);
-
-		float grass_t = 1.0f - ((height - 0.12f) / 0.38f);
-		
-		color = vector4_lerp(grass_light, grass_deep, grass_t);
-	    }
-	    else if(height > 0.1f)
-	    {
-		vector4 sand_light = vector4_create(0.75f, 0.69f, 0.5f, 1.0f);
-		vector4 sand_dark = vector4_create(0.65f, 0.59f, 0.4f, 1.0f);
-
-		float sand_t = 1.0f - ((height - 0.1f) / 0.02f);
-		
-		color = vector4_lerp(sand_light, sand_dark, sand_t);
-	    }
-	    else
-	    {
-		vector4 sea_light = vector4_create(0.1f, 0.4f, 0.6f, 1.0f);
-		vector4 sea_deep = vector4_create(0.05f, 0.1f, 0.9f, 1.0f);
-
-		float depth = 1.0f - (height / 0.1f);
-		
-		color = vector4_lerp(sea_light, sea_deep, depth);
-	    }
-
-	    write_pixel = texture_pack_rgba(write_pixel, color);
-	}
-    }
     
     chunk.material = material_create(terrain->shader, KB(1));
 
     { // NOTE: Init setup parameters.
-	chunk.setup.control = load_texture(texture, 0);
+	int texture_resolution = 1024;
+	
+	chunk.setup.heightmap = load_texture(terrain->heightmap_texture, 0);
+
+	chunk.setup.material = material_create(terrain->generate_detail_texture_shader, KB(1));
+	material_set_texture(&chunk.setup.material, "heightmap", &chunk.setup.heightmap);
+
+	vector2 u_st = vector2_create((real32)heightmap_w / terrain->heightmap_texture.width,
+				      (real32)heightmap_x / terrain->heightmap_texture.width);
+	vector2 v_st = vector2_create((real32)heightmap_h / terrain->heightmap_texture.height,
+				      (real32)heightmap_y / terrain->heightmap_texture.height);
+	vector4 heightmap_st = vector4_create(u_st.x, u_st.y, v_st.x, v_st.y);
+	material_set_vector(&chunk.setup.material, "heightmap_st", heightmap_st);
 	
 	// TODO: Reuse one render target for all generated chunks.
-	render_target target = render_target_create(chunk.setup.control.data.width,
-						    chunk.setup.control.data.height,
-						    1, 0);
+	chunk.setup.target = render_target_create(texture_resolution, texture_resolution, 0, 0);
 
-	texture_data texture_data;
-	texture_data.width = texture.width;
-	texture_data.height = texture.height;
-	texture_data.components = 4;
-	texture_data.colors = 0;
+	texture_data chunk_texture = (texture_data){0};
+	chunk_texture.width = texture_resolution;
+	chunk_texture.height = texture_resolution;
+	chunk_texture.components = 4;
+	
+	chunk.texture = load_texture(chunk_texture, 0);
+	material_set_texture(&chunk.material, "main_texture", &chunk.texture);
 
-	// TODO: Enable mipmaps.
-	chunk.texture = load_texture(texture_data, 0);
-
-	render_target_attach_color(&target, 0, &chunk.texture);
-	chunk.setup.target = target;
+	render_target_attach_color(&chunk.setup.target, 0, &chunk.texture);
 
 	// TODO: Reuse one quad for all generated chunks.
-	chunk.setup.quad = load_mesh(mesh_create_quad(), 0);
+	chunk.setup.quad = load_mesh(mesh_create_quad(1.0f), 0);
 	mesh_data_free(&chunk.setup.quad.data);
 	
 	chunk.setup.state = terrain_chunk_setup_draw;

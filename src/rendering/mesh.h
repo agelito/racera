@@ -2,7 +2,8 @@
 #define MESH_H_INCLUDED
 
 #include "math.h"
-#include "heightmap.h"
+
+#include "../heightmap.h"
 
 #define MESH_MAX_VERTEX_BUFFERS 8
 #define MESH_MAX_INPUT_LAYOUTS 16
@@ -88,7 +89,7 @@ void
 update_mesh(loaded_mesh* mesh, uint32 offset, uint32 count);
 
 mesh_data
-mesh_create_quad();
+mesh_create_quad(float size);
 
 mesh_data
 mesh_create_triangle(float side);
@@ -117,5 +118,8 @@ mesh_generate_tangents(mesh_data* data);
 
 void
 mesh_generate_normals(mesh_data* data, bool32 from_center);
+
+void
+mesh_reverse_winding(mesh_data* data);
 
 #endif // MESH_H_INCLUDED

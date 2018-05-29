@@ -4,8 +4,9 @@
 #include "platform/platform.h"
 
 #include "rendering/renderer.h"
-#include "rendering/heightmap.h"
 #include "rendering/render_target.h"
+
+#include "heightmap.h"
 
 typedef enum terrain_chunk_setup_state {
     terrain_chunk_state_none,
@@ -15,9 +16,10 @@ typedef enum terrain_chunk_setup_state {
 
 typedef struct terrain_chunk_setup {
     terrain_chunk_setup_state state;
-    
-    render_target target;
-    loaded_texture control;
+
+    render_target  target;
+    loaded_texture heightmap;
+    material material;
 
     loaded_mesh quad;
 
@@ -29,6 +31,7 @@ typedef struct terrain_chunk {
 
     loaded_mesh     mesh;
     loaded_texture  texture;
+    loaded_texture  detail;
     
     material        material;
 
@@ -38,8 +41,10 @@ typedef struct terrain_chunk {
 
 typedef struct terrain {
     shader_program* shader;
+    shader_program* generate_detail_texture_shader;
     
     heightmap heightmap;
+    texture_data heightmap_texture;
 
     float chunk_width;
     float chunk_depth;

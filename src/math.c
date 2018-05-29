@@ -282,25 +282,37 @@ matrix4
 matrix_perspective(float field_of_view, float aspect_ratio, float near, float far)
 {
     float fov_radians = DEGREES_TO_RADIANS * field_of_view;
-    
-    float top = near * tan(fov_radians * 0.5f);
-    float bottom = -top;
-    float right = top * aspect_ratio;
-    float left = -right;
-    
-    float near2 = near * 2.0f;
-    float rml = (right - left);
-    float rpl = (right + left);
-    float tmb = (top - bottom);
-    float tpb = (top + bottom);
-    float fmn = (far - near);
-    float fpn = (far + near);
+    float focal_length = 1.0f / tan(fov_radians * 0.5f);
+    float foa = focal_length / aspect_ratio;
+
+    real32 fpn = (far + near);
+    real32 fmn = (far - near);
+
+    real32 fn2 = (2.0f * far * near);
 
     matrix4 matrix = {{
-	    near2 / rml, 0.0f, 0.0f, 0.0f,
-	    0.0f, near2 / tmb, 0.0f, 0.0f,
-	    rpl / rml, tpb / tmb, -(fpn / fmn), -1.0f,
-	    0.0f, 0.0f, -((2.0f * far * near) / fmn), 0.0f
+	    focal_length,	0.0f,	0.0f,		0.0f,
+	    0.0f,		foa,	0.0f,		0.0f,
+	    0.0f,		0.0f,	-(fpn / fmn),	-1.0f,
+	    0.0f,		0.0f,	-(fn2 / fmn),	0.0f
+	}};
+    
+
+    return matrix;
+}
+
+matrix4
+matrix_perspective_infinite(float field_of_view, float aspect_ratio, float near)
+{
+    float fov_radians = DEGREES_TO_RADIANS * field_of_view;
+    float focal_length = 1.0f / tan(fov_radians * 0.5f);
+    float foa = focal_length / aspect_ratio;
+
+    matrix4 matrix = {{
+	    focal_length,	0.0f,	0.0f,		0.0f,
+	    0.0f,		foa,	0.0f,		0.0f,
+	    0.0f,		0.0f,	-1.0f,		-1.0f,
+	    0.0f,		0.0f,	-(near * 2.0f),	0.0f
 	}};
 
     return matrix;

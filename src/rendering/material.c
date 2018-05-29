@@ -122,6 +122,13 @@ material_set_color(material* material, char* name, vector4 color)
 }
 
 void
+material_set_vector(material* material, char* name, vector4 vector)
+{
+    material_set_named_value(material, name, &vector, material_data_type_vector4,
+			     sizeof(vector4));
+}
+
+void
 material_apply(material* material, shader_uniform_group* uniforms)
 {
     int texture_slot = 0;

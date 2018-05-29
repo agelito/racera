@@ -1,9 +1,9 @@
 #ifndef HEIGHTMAP_H_INCLUDED
 #define HEIGHTMAP_H_INCLUDED
 
-#include "../platform/platform.h"
+#include "platform/platform.h"
 
-#include "texture.h"
+#include "rendering/texture.h"
 
 typedef struct heightmap
 {

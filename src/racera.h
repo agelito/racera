@@ -37,6 +37,7 @@ struct game_state
     shader_program visualize_colors;
     shader_program visualize_normals;
     shader_program visualize_texcoords;
+    shader_program sky_shader;
     shader_program postfx_test;
 
     render_queue render_queue;
@@ -46,6 +47,7 @@ struct game_state
     loaded_mesh cube;
     loaded_mesh quad;
     loaded_mesh cup;
+    loaded_mesh skybox;
 
     loaded_texture checker;
 
@@ -54,6 +56,7 @@ struct game_state
 
     material cup_material;
     material text_background;
+    material sky_material;
     material postfx;
 
     terrain terrain;
